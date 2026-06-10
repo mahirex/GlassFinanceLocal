@@ -3,6 +3,7 @@
 import { dbState, round } from '../state.js';
 import { inrFormat } from './finance.js';
 import { GlassTable } from '../components/table.js';
+import { showModal } from './operations.js';
 
 export function renderBanking(container) {
   const state = dbState.state;
@@ -159,9 +160,12 @@ export function renderBanking(container) {
 
     <!-- Bank Accounts Table Mount -->
     <div class="glass-panel" style="padding: 24px; margin-top: 25px;">
-      <h3 style="font-size: 1.15rem; margin-bottom: 20px; font-weight: 700; color: var(--text-primary);">
-        Bank Accounts Master Registry
-      </h3>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin: 0;">
+          Bank Accounts Master Registry
+        </h3>
+        <button class="btn btn-primary" id="btn-add-bank-account"><i data-lucide="plus-circle"></i> Add Bank Account</button>
+      </div>
       <div id="bank-accounts-table-mount"></div>
     </div>
   `;
@@ -201,6 +205,7 @@ export function renderBanking(container) {
       feedbackEl.innerHTML = `<i data-lucide="alert-triangle" style="vertical-align: middle; margin-right: 8px;"></i> Transfer Blocked: ${txnResult.error}`;
       feedbackEl.style.display = 'block';
     }
+  });
 
   const btnAutofillXfer = container.querySelector('.btn-autofill-xfer');
   if (btnAutofillXfer) {
@@ -221,8 +226,62 @@ export function renderBanking(container) {
     });
   }
 
-  if (window.lucide) window.lucide.createIcons();
-  });
+  // Add Bank Account button trigger
+  const btnAddBank = container.querySelector('#btn-add-bank-account');
+  if (btnAddBank) {
+    btnAddBank.addEventListener('click', () => {
+      const formHtml = `
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="bank-name">Account Name *</label>
+          <input type="text" id="bank-name" class="form-control" placeholder="e.g. ICICI Current Account" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="bank-number">Account Number *</label>
+          <input type="text" id="bank-number" class="form-control" placeholder="e.g. 5029102930291" required>
+        </div>
+        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div class="form-group">
+            <label for="bank-ifsc">IFSC Code *</label>
+            <input type="text" id="bank-ifsc" class="form-control" placeholder="e.g. ICIC0000104" required>
+          </div>
+          <div class="form-group">
+            <label for="bank-branch">Branch Details</label>
+            <input type="text" id="bank-branch" class="form-control" placeholder="e.g. Vashi Sector 17">
+          </div>
+        </div>
+        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div class="form-group">
+            <label for="bank-opening">Opening Balance (₹) *</label>
+            <input type="number" step="0.01" id="bank-opening" class="form-control" placeholder="0.00" required>
+          </div>
+          <div class="form-group">
+            <label for="bank-upi">UPI ID (Optional)</label>
+            <input type="text" id="bank-upi" class="form-control" placeholder="e.g. glasserpicici@okicici">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px; flex-direction: row; align-items: center; gap: 10px; cursor: pointer;">
+          <input type="checkbox" id="bank-overdraft" style="width: auto;">
+          <label for="bank-overdraft" style="margin: 0; cursor: pointer;">Allow Overdraft (Balance can drop below ₹0)</label>
+        </div>
+      `;
+
+      showModal('Add Bank Account', formHtml, (formEl) => {
+        const payload = {
+          account_name: formEl.querySelector('#bank-name').value,
+          account_number: formEl.querySelector('#bank-number').value,
+          ifsc: formEl.querySelector('#bank-ifsc').value,
+          branch: formEl.querySelector('#bank-branch').value || 'NA',
+          opening_balance: parseFloat(formEl.querySelector('#bank-opening').value) || 0,
+          upi_id: formEl.querySelector('#bank-upi').value || '',
+          allow_overdraft: formEl.querySelector('#bank-overdraft').checked
+        };
+
+        dbState.addBankAccount(payload);
+        renderBanking(container);
+        return true;
+      });
+    });
+  }
 
   const headers = [
     { key: 'account_name', label: 'Account Name' },
@@ -232,13 +291,23 @@ export function renderBanking(container) {
     { key: 'opening_balance', label: 'Opening Balance (₹)', render: val => inrFormat.format(val) },
     { key: 'current_balance', label: 'Current Balance (₹)', render: val => inrFormat.format(val) },
     { key: 'upi_id', label: 'UPI ID' },
-    { key: 'allow_overdraft', label: 'Allow Overdraft', render: val => val ? 'Yes' : 'No' }
+    { key: 'allow_overdraft', label: 'Allow Overdraft', render: val => val ? 'Yes' : 'No' },
+    { key: 'actions', label: 'Actions', render: (val, row) => `
+      <button class="btn btn-secondary btn-delete-bank-row" data-id="${row.bank_id}" style="padding: 4px 8px; font-size: 0.75rem; color: var(--credit-color); border-color: rgba(239, 68, 68, 0.2);"><i data-lucide="trash-2" style="width: 12px; height: 12px; margin-right: 4px; vertical-align: middle;"></i>Delete</button>
+    ` }
   ];
 
-  new GlassTable({
-    container: container.querySelector('#bank-accounts-table-mount'),
+  const tableMount = container.querySelector('#bank-accounts-table-mount');
+
+  const bankTable = new GlassTable({
+    container: tableMount,
     headers: headers,
     data: state.bankAccounts,
+    onDeleteSelected: (selectedRows) => {
+      const ids = selectedRows.map(row => row.bank_id);
+      dbState.deleteBankAccounts(ids);
+      renderBanking(container);
+    },
     onImportCSV: (importedRows) => {
       importedRows.forEach(row => {
         dbState.addBankAccount({
@@ -252,6 +321,25 @@ export function renderBanking(container) {
         });
       });
       renderBanking(container);
+    }
+  });
+
+  // Event delegation for row delete
+  tableMount.addEventListener('click', (e) => {
+    const deleteBtn = e.target.closest('.btn-delete-bank-row');
+    if (deleteBtn) {
+      const bankId = deleteBtn.dataset.id;
+      const bank = state.bankAccounts.find(b => b.bank_id === bankId);
+      if (bank) {
+        bankTable.showConfirmModal(
+          'Confirm Account Deletion',
+          `Are you sure you want to permanently delete the bank account '${bank.account_name}'? This will remove it from the treasury system.`,
+          () => {
+            dbState.deleteBankAccounts([bankId]);
+            renderBanking(container);
+          }
+        );
+      }
     }
   });
 

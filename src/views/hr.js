@@ -1,16 +1,15 @@
-// GlassERP Pro V2 Human Resources & Payroll Module
-
 import { dbState, round, uuid } from '../state.js';
 import { inrFormat } from './finance.js';
 import { GlassTable } from '../components/table.js';
+import { showModal } from './operations.js';
 
 export function renderHR(container, viewName) {
   if (viewName === 'employees') {
     renderEmployeeDirectory(container);
   } else if (viewName === 'attendance') {
     renderAttendanceRoster(container);
-  } else if (viewName === 'documents') {
-    renderDocumentsLocker(container);
+  } else if (viewName === 'employee-advances') {
+    renderEmployeeAdvancesBoard(container);
   }
 }
 
@@ -19,106 +18,29 @@ function renderEmployeeDirectory(container) {
   const state = dbState.state;
 
   container.innerHTML = `
-    <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 30px; align-items: start; flex-wrap: wrap;">
+    <div style="display: grid; grid-template-columns: 1.2fr 2fr; gap: 30px; align-items: start; flex-wrap: wrap;">
       
-      <!-- Left Column: Add Employee Form & Quick Directory -->
+      <!-- Left Column: Add Employee Button & Quick Directory -->
       <div style="display: flex; flex-direction: column; gap: 20px;">
-        
-        <!-- Add Employee Form -->
-        <div class="glass-panel">
-          <h3 style="font-size: 1.1rem; margin-bottom: 15px; font-weight: 700; color: var(--text-primary);">
-            Onboard New Employee
-          </h3>
-          <form id="onboard-employee-form">
-            <div class="form-group" style="margin-bottom: 12px;">
-              <label for="emp-name">Full Name *</label>
-              <input type="text" id="emp-name" class="form-control" placeholder="Rohan Sharma" required>
-            </div>
-            
-            <div class="form-grid" style="grid-template-columns: 1fr; gap: 12px; margin-bottom: 12px;">
-              <div class="form-group">
-                <label for="emp-email">Email Address *</label>
-                <input type="email" id="emp-email" class="form-control" placeholder="rohan@glasserp.in" required>
-              </div>
-              <div class="form-group">
-                <label for="emp-mobile">Mobile Number *</label>
-                <input type="tel" id="emp-mobile" class="form-control" placeholder="9820012345" required>
-              </div>
-            </div>
-
-            <div class="form-group" style="margin-bottom: 12px;">
-              <label for="emp-address">Residential Address</label>
-              <input type="text" id="emp-address" class="form-control" placeholder="Flat No, Wing, Area, City">
-            </div>
-
-            <!-- Verification Fields -->
-            <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-              <div class="form-group">
-                <label for="emp-pan">PAN (Tax ID) *</label>
-                <input type="text" id="emp-pan" class="form-control" placeholder="ABCDE1234F" style="text-transform: uppercase;" required>
-              </div>
-              <div class="form-group">
-                <label for="emp-aadhaar">Aadhaar Status *</label>
-                <select id="emp-aadhaar" required>
-                  <option value="Verified (Physical Check)">Verified (Physical Check)</option>
-                  <option value="Pending Check">Pending Physical verification</option>
-                  <option value="Not Provided">Not Provided</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- Payroll Settings -->
-            <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px;">
-              <div class="form-group">
-                <label for="emp-designation">Designation *</label>
-                <input type="text" id="emp-designation" class="form-control" placeholder="Structural Engineer" required>
-              </div>
-              <div class="form-group">
-                <label for="emp-salary-type">Salary Type *</label>
-                <select id="emp-salary-type" required>
-                  <option value="Monthly">Monthly Salary</option>
-                  <option value="Weekly">Weekly Wage</option>
-                  <option value="Daily Wage">Daily Wage</option>
-                  <option value="Contract">Contractual Basis</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px;">
-              <div class="form-group">
-                <label for="emp-salary-amt">Base Salary / Wage (₹) *</label>
-                <input type="number" id="emp-salary-amt" class="form-control" placeholder="75,000" required>
-              </div>
-              <div class="form-group">
-                <label for="emp-join">Joining Date *</label>
-                <input type="date" id="emp-join" class="form-control" value="${new Date().toISOString().split('T')[0]}" required>
-              </div>
-            </div>
-
-            <div id="onboard-feedback" style="display: none; padding: 10px; border-radius: var(--border-radius-sm); font-size: 0.8rem; font-weight: 600; margin-bottom: 12px;"></div>
-
-            <div style="display: flex; gap: 12px; margin-top: 10px;">
-              <button type="button" class="btn btn-secondary btn-autofill-emp" style="background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2); flex: 1;"><i data-lucide="sparkles" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: middle;"></i> Autofill Demo</button>
-              <button type="submit" class="btn btn-primary" style="flex: 1.5;"><i data-lucide="user-plus"></i> Complete Onboarding</button>
-            </div>
-          </form>
-        </div>
-
-        <!-- Directory list -->
-        <div class="glass-panel">
+        <div class="glass-panel" style="padding: 20px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
             <h3 style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary); margin: 0;">
-              Staff Master Registry
+              Staff Directory
             </h3>
-            <div style="display: flex; gap: 8px;">
-              <button type="button" class="btn btn-secondary" id="btn-export-emp" style="padding: 4px 10px; font-size: 0.75rem;"><i data-lucide="download" style="width: 12px; height: 12px;"></i> Export</button>
-              <label class="btn btn-secondary" style="cursor: pointer; padding: 4px 10px; font-size: 0.75rem; margin: 0;">
-                <i data-lucide="upload" style="width: 12px; height: 12px; margin-right: 4px;"></i> Import
-                <input type="file" id="import-emp-csv" accept=".csv" style="display: none;">
-              </label>
-            </div>
+            <button type="button" class="btn btn-primary" id="btn-add-employee" style="padding: 6px 12px; font-size: 0.8rem;">
+              <i data-lucide="user-plus" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: middle;"></i> Onboard
+            </button>
           </div>
-          <div style="display: flex; flex-direction: column; gap: 10px;" id="employee-list-mount"></div>
+          
+          <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+            <button type="button" class="btn btn-secondary" id="btn-export-emp" style="padding: 4px 10px; font-size: 0.75rem; flex: 1;"><i data-lucide="download" style="width: 12px; height: 12px; margin-right: 4px;"></i> Export</button>
+            <label class="btn btn-secondary" style="cursor: pointer; padding: 4px 10px; font-size: 0.75rem; margin: 0; flex: 1; text-align: center;">
+              <i data-lucide="upload" style="width: 12px; height: 12px; margin-right: 4px;"></i> Import
+              <input type="file" id="import-emp-csv" accept=".csv" style="display: none;">
+            </label>
+          </div>
+
+          <div id="employee-list-table-mount"></div>
         </div>
       </div>
 
@@ -132,101 +54,145 @@ function renderEmployeeDirectory(container) {
     </div>
   `;
 
-  const employeeListMount = container.querySelector('#employee-list-mount');
-  const onboardForm = container.querySelector('#onboard-employee-form');
-  const onboardFeedback = container.querySelector('#onboard-feedback');
+  // Draw list table instead of cards
+  const headers = [
+    { key: 'name', label: 'Name' },
+    { key: 'employee_id', label: 'ID' },
+    { key: 'designation', label: 'Designation' }
+  ];
 
-  // Load employee listing cards
-  function loadEmployeeCards() {
-    employeeListMount.innerHTML = '';
-    state.employees.forEach(emp => {
-      const card = document.createElement('div');
-      card.className = 'glass-panel';
-      card.style.padding = '12px 16px';
-      card.style.cursor = 'pointer';
-      card.style.display = 'flex';
-      card.style.justifyContent = 'space-between';
-      card.style.alignItems = 'center';
-      card.style.background = 'rgba(255, 255, 255, 0.01)';
-      
-      card.innerHTML = `
-        <div>
-          <h4 style="font-size: 0.95rem; font-weight: 700;">${emp.name}</h4>
-          <p style="font-size: 0.75rem; color: var(--text-secondary);">${emp.designation}</p>
-        </div>
-        <div style="text-align: right;">
-          <span style="font-size: 0.75rem; color: var(--accent-color); font-weight: 600;">${emp.employee_id}</span>
-          <p style="font-size: 0.75rem; color: var(--text-muted);">${emp.salary_type}</p>
-        </div>
-      `;
-
-      card.addEventListener('click', () => {
-        // Toggle selected state in view
-        employeeListMount.querySelectorAll('.glass-panel').forEach(c => c.style.borderColor = 'var(--border-glass)');
-        card.style.borderColor = 'var(--accent-color)';
-        
-        renderEmployeeProfile(container.querySelector('#employee-profile-mount'), emp);
-      });
-
-      employeeListMount.appendChild(card);
-    });
-
-    if (window.lucide) window.lucide.createIcons();
-  }
-
-  // Handle Onboarding form submission
-  onboardForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    onboardFeedback.style.display = 'none';
-
-    try {
-      const payload = {
-        name: container.querySelector('#emp-name').value,
-        email: container.querySelector('#emp-email').value,
-        mobile: container.querySelector('#emp-mobile').value,
-        address: container.querySelector('#emp-address').value,
-        pan: container.querySelector('#emp-pan').value,
-        aadhaar_status: container.querySelector('#emp-aadhaar').value,
-        designation: container.querySelector('#emp-designation').value,
-        salary_type: container.querySelector('#emp-salary-type').value,
-        base_salary: parseFloat(container.querySelector('#emp-salary-amt').value),
-        joining_date: container.querySelector('#emp-join').value
-      };
-
-      dbState.createEmployee(payload);
-
-      onboardFeedback.style.background = 'var(--debit-bg)';
-      onboardFeedback.style.color = 'var(--debit-color)';
-      onboardFeedback.textContent = 'Employee onboarded successfully!';
-      onboardFeedback.style.display = 'block';
-
-      onboardForm.reset();
-      loadEmployeeCards();
-    } catch (err) {
-      onboardFeedback.style.background = 'var(--credit-bg)';
-      onboardFeedback.style.color = 'var(--credit-color)';
-      onboardFeedback.textContent = err.message;
-      onboardFeedback.style.display = 'block';
+  const table = new GlassTable({
+    container: container.querySelector('#employee-list-table-mount'),
+    headers: headers,
+    data: state.employees,
+    onRowClick: (row) => {
+      renderEmployeeProfile(container.querySelector('#employee-profile-mount'), row);
+    },
+    onDeleteSelected: (selectedRows) => {
+      const ids = selectedRows.map(row => row.employee_id);
+      dbState.deleteEmployees(ids);
+      renderEmployeeDirectory(container);
     }
   });
 
-  const btnAutofillEmp = container.querySelector('.btn-autofill-emp');
-  if (btnAutofillEmp) {
-    btnAutofillEmp.addEventListener('click', () => {
-      container.querySelector('#emp-name').value = 'Vikram Malhotra';
-      container.querySelector('#emp-email').value = 'vikram.m@glasserp.in';
-      container.querySelector('#emp-mobile').value = '9876123450';
-      container.querySelector('#emp-address').value = 'Flat 502, B-Wing, Ritu Heights, Thane West';
-      container.querySelector('#emp-pan').value = 'VPMAL8765Q';
-      container.querySelector('#emp-aadhaar').value = 'Verified (Physical Check)';
-      container.querySelector('#emp-designation').value = 'Junior Estimator';
-      container.querySelector('#emp-salary-type').value = 'Monthly';
-      container.querySelector('#emp-salary-amt').value = '45000';
-      container.querySelector('#emp-join').value = new Date().toISOString().split('T')[0];
-    });
-  }
+  // Modal Onboard
+  container.querySelector('#btn-add-employee').addEventListener('click', () => {
+    const today = new Date().toISOString().split('T')[0];
+    const formHtml = `
+      <div style="text-align: left;">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="emp-name">Full Name *</label>
+          <input type="text" id="emp-name" class="form-control" placeholder="Rohan Sharma" required>
+        </div>
+        
+        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div class="form-group">
+            <label for="emp-email">Email Address *</label>
+            <input type="email" id="emp-email" class="form-control" placeholder="rohan@glasserp.in" required>
+          </div>
+          <div class="form-group">
+            <label for="emp-mobile">Mobile Number *</label>
+            <input type="tel" id="emp-mobile" class="form-control" placeholder="9820012345" required>
+          </div>
+        </div>
 
-  loadEmployeeCards();
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="emp-address">Residential Address</label>
+          <input type="text" id="emp-address" class="form-control" placeholder="Flat No, Wing, Area, City">
+        </div>
+
+        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div class="form-group">
+            <label for="emp-pan">PAN (Tax ID) *</label>
+            <input type="text" id="emp-pan" class="form-control" placeholder="ABCDE1234F" style="text-transform: uppercase;" required>
+          </div>
+          <div class="form-group">
+            <label for="emp-aadhaar">Aadhaar Status *</label>
+            <select id="emp-aadhaar" required>
+              <option value="Verified (Physical Check)">Verified (Physical Check)</option>
+              <option value="Pending Check">Pending Physical verification</option>
+              <option value="Not Provided">Not Provided</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px;">
+          <div class="form-group">
+            <label for="emp-designation">Designation *</label>
+            <input type="text" id="emp-designation" class="form-control" placeholder="Structural Engineer" required>
+          </div>
+          <div class="form-group">
+            <label for="emp-salary-type">Salary Type *</label>
+            <select id="emp-salary-type" required>
+              <option value="Monthly">Monthly Salary</option>
+              <option value="Weekly">Weekly Wage</option>
+              <option value="Daily Wage">Daily Wage</option>
+              <option value="Contract">Contractual Basis</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px;">
+          <div class="form-group">
+            <label for="emp-salary-amt">Base Salary / Wage (₹) *</label>
+            <input type="number" id="emp-salary-amt" class="form-control" placeholder="75,000" required>
+          </div>
+          <div class="form-group">
+            <label for="emp-join">Joining Date *</label>
+            <input type="date" id="emp-join" class="form-control" value="${today}" required>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; margin-top: 10px;">
+          <button type="button" class="btn btn-secondary btn-autofill-emp" style="background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2);"><i data-lucide="sparkles" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: middle;"></i> Autofill Demo</button>
+        </div>
+      </div>
+    `;
+
+    showModal('Onboard New Employee', formHtml, (formEl) => {
+      try {
+        const payload = {
+          name: formEl.querySelector('#emp-name').value,
+          email: formEl.querySelector('#emp-email').value,
+          mobile: formEl.querySelector('#emp-mobile').value,
+          address: formEl.querySelector('#emp-address').value,
+          pan: formEl.querySelector('#emp-pan').value,
+          aadhaar_status: formEl.querySelector('#emp-aadhaar').value,
+          designation: formEl.querySelector('#emp-designation').value,
+          salary_type: formEl.querySelector('#emp-salary-type').value,
+          base_salary: parseFloat(formEl.querySelector('#emp-salary-amt').value),
+          joining_date: formEl.querySelector('#emp-join').value
+        };
+
+        dbState.createEmployee(payload);
+        renderEmployeeDirectory(container);
+        return true;
+      } catch (err) {
+        alert(err.message);
+        return false;
+      }
+    });
+
+    const modalEl = document.querySelector('.modal-overlay');
+    if (modalEl) {
+      const btnAutofill = modalEl.querySelector('.btn-autofill-emp');
+      if (btnAutofill) {
+        btnAutofill.addEventListener('click', () => {
+          modalEl.querySelector('#emp-name').value = 'Vikram Malhotra';
+          modalEl.querySelector('#emp-email').value = 'vikram.m@glasserp.in';
+          modalEl.querySelector('#emp-mobile').value = '9876123450';
+          modalEl.querySelector('#emp-address').value = 'Flat 502, B-Wing, Ritu Heights, Thane West';
+          modalEl.querySelector('#emp-pan').value = 'VPMAL8765Q';
+          modalEl.querySelector('#emp-aadhaar').value = 'Verified (Physical Check)';
+          modalEl.querySelector('#emp-designation').value = 'Junior Estimator';
+          modalEl.querySelector('#emp-salary-type').value = 'Monthly';
+          modalEl.querySelector('#emp-salary-amt').value = '45000';
+          modalEl.querySelector('#emp-join').value = today;
+        });
+      }
+      if (window.lucide) window.lucide.createIcons();
+    }
+  });
 
   // Wire up employee CSV Export
   container.querySelector('#btn-export-emp').addEventListener('click', () => {
@@ -319,7 +285,7 @@ function renderEmployeeDirectory(container) {
           }
         }
         
-        loadEmployeeCards();
+        renderEmployeeDirectory(container);
       };
       reader.readAsText(file);
     }
@@ -862,36 +828,145 @@ function renderAttendanceRoster(container) {
   renderRosterRows();
 }
 
-// 4. DOCUMENTS COMPLIANCE FILE LOCKER
-function renderDocumentsLocker(container) {
+// 4. EMPLOYEE SALARY ADVANCES BOARD
+function renderEmployeeAdvancesBoard(container) {
+  const state = dbState.state;
+
   container.innerHTML = `
-    <div class="glass-panel">
-      <h3 style="font-size: 1.15rem; margin-bottom: 20px; font-weight: 700; color: var(--text-primary); display: flex; align-items: center; gap: 8px;">
-        <i data-lucide="folder-lock" style="color: var(--accent-color);"></i>
-        Secure Corporate Documents Locker
-      </h3>
+    <div style="display: flex; flex-direction: column; gap: 25px;">
       
-      <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px;">
-        <div class="glass-panel doc-card" style="padding: 20px;">
-          <i data-lucide="shield-check" style="width: 32px; height: 32px; color: var(--debit-color);"></i>
-          <h5 style="margin-top: 8px; font-weight: 700; font-size: 0.9rem;">Company GST Registration Certificate</h5>
-          <p style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">PDF - 245 KB | Mapped to State 27</p>
+      <!-- Top Actions Bar -->
+      <div class="glass-panel" style="padding: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+        <div>
+          <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin: 0;">Employee Salary Advances Board</h3>
+          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">Track outstanding loans and record repayments</p>
+        </div>
+        <div style="display: flex; gap: 10px;">
+          <button class="btn btn-primary" id="btn-issue-advance" style="background: var(--credit-color); color: #fff; border-color: var(--credit-color);">
+            <i data-lucide="arrow-up-right" style="width: 16px; height: 16px; margin-right: 4px; vertical-align: middle;"></i> Issue Advance (Pay)
+          </button>
+          <button class="btn btn-primary" id="btn-receive-refund" style="background: var(--debit-color); color: #fff; border-color: var(--debit-color);">
+            <i data-lucide="arrow-down-left" style="width: 16px; height: 16px; margin-right: 4px; vertical-align: middle;"></i> Record Refund (Receipt)
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Columns: Left (Summary Table), Right (Detailed History Log) -->
+      <div style="display: grid; grid-template-columns: 1fr 1.2fr; gap: 30px; align-items: start; flex-wrap: wrap;">
+        
+        <!-- Left Column: Advances Summary Table -->
+        <div class="glass-panel" style="padding: 24px;">
+          <h4 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="users" style="color: var(--accent-color); width: 18px; height: 18px;"></i>
+            Outstanding Balances Summary
+          </h4>
+          <div id="advances-summary-mount"></div>
         </div>
 
-        <div class="glass-panel doc-card" style="padding: 20px;">
-          <i data-lucide="file-text" style="width: 32px; height: 32px;"></i>
-          <h5 style="margin-top: 8px; font-weight: 700; font-size: 0.9rem;">Corporate PAN Card Mapped</h5>
-          <p style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">PNG - 1.2 MB | Admin Locker</p>
+        <!-- Right Column: Detailed Transaction Registry -->
+        <div class="glass-panel" style="padding: 24px;">
+          <h4 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="history" style="color: var(--accent-color); width: 18px; height: 18px;"></i>
+            Advances Transaction History Log
+          </h4>
+          <div id="advances-history-mount"></div>
         </div>
 
-        <div class="glass-panel doc-card" style="padding: 20px;">
-          <i data-lucide="file-check-2" style="width: 32px; height: 32px;"></i>
-          <h5 style="margin-top: 8px; font-weight: 700; font-size: 0.9rem;">Standard Board Resolution Charter</h5>
-          <p style="font-size: 0.7rem; color: var(--text-muted); margin-top: 2px;">PDF - 120 KB | Signed 2026</p>
-        </div>
       </div>
     </div>
   `;
+
+  // Bind shortcuts
+  container.querySelector('#btn-issue-advance').addEventListener('click', () => {
+    const link = document.querySelector('.menu-item[data-route="make-payment"]');
+    if (link) {
+      link.click();
+      setTimeout(() => {
+        const typeSelect = document.getElementById('pay-type');
+        if (typeSelect) {
+          typeSelect.value = 'Employee Advance';
+          typeSelect.dispatchEvent(new Event('change'));
+        }
+      }, 50);
+    }
+  });
+
+  container.querySelector('#btn-receive-refund').addEventListener('click', () => {
+    const link = document.querySelector('.menu-item[data-route="receive-payment"]');
+    if (link) {
+      link.click();
+      setTimeout(() => {
+        const catSelect = document.getElementById('rcv-category');
+        if (catSelect) {
+          catSelect.value = 'Employee Refund';
+          catSelect.dispatchEvent(new Event('change'));
+        }
+      }, 50);
+    }
+  });
+
+  // Render Left: Summary Table
+  const summaryHeaders = [
+    { key: 'name', label: 'Employee Name' },
+    { key: 'base_salary', label: 'Base Salary (₹)', render: val => inrFormat.format(val) },
+    { key: 'advance_due', label: 'Advance Due (₹)', render: val => val > 0 
+      ? `<span style="color: var(--credit-color); font-weight: 700;">${inrFormat.format(val)}</span>` 
+      : `<span style="color: var(--text-muted);">₹0.00</span>` 
+    }
+  ];
+
+  new GlassTable({
+    container: container.querySelector('#advances-summary-mount'),
+    headers: summaryHeaders,
+    data: state.employees
+  });
+
+  // Compile Right: Historical logs
+  const advances = state.expenses
+    .filter(e => e.payment_type === 'Employee Advance')
+    .map(e => {
+      const emp = state.employees.find(emp => emp.employee_id === e.employee_id);
+      return {
+        date: e.date,
+        name: emp ? emp.name : 'Unknown Employee',
+        type: 'Advance (Paid)',
+        amount: e.amount,
+        reference: e.reference_no,
+        typeClass: 'badge-credit',
+        amtStyle: 'color: var(--credit-color); font-weight: 600;'
+      };
+    });
+
+  const refunds = state.income
+    .filter(inc => inc.inflow_category === 'Employee Refund')
+    .map(inc => {
+      const emp = state.employees.find(emp => emp.employee_id === inc.employee_id);
+      return {
+        date: inc.date,
+        name: emp ? emp.name : 'Unknown Employee',
+        type: 'Refund (Received)',
+        amount: inc.amount,
+        reference: inc.reference_no,
+        typeClass: 'badge-debit',
+        amtStyle: 'color: var(--debit-color); font-weight: 600;'
+      };
+    });
+
+  const combinedHistory = [...advances, ...refunds].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  const historyHeaders = [
+    { key: 'date', label: 'Date' },
+    { key: 'name', label: 'Employee Name' },
+    { key: 'type', label: 'Type', render: (val, row) => `<span class="badge ${row.typeClass}">${val}</span>` },
+    { key: 'amount', label: 'Amount (₹)', render: (val, row) => `<span style="${row.amtStyle}">${inrFormat.format(val)}</span>` },
+    { key: 'reference', label: 'Ref ID' }
+  ];
+
+  new GlassTable({
+    container: container.querySelector('#advances-history-mount'),
+    headers: historyHeaders,
+    data: combinedHistory
+  });
 
   if (window.lucide) {
     window.lucide.createIcons();

@@ -2,6 +2,7 @@
 
 import { dbState, round, uuid } from '../state.js';
 import { GlassTable } from '../components/table.js';
+import { showModal } from './operations.js';
 
 // Visual currency formatter
 export const inrFormat = new Intl.NumberFormat('en-IN', {
@@ -45,9 +46,9 @@ export function renderMakePayment(container) {
                 <option value="Employee Advance">Employee Advance / Loan</option>
                 <option value="Salary Payout">Staff Payroll Disbursement</option>
                 <option value="Materials Procurement">Materials Procurement</option>
-                <option value="Rent">Office / Space Rent</option>
-                <option value="Utility">Electricity & Internet Utilities</option>
-                <option value="Machine Repair">Machine Repair / Fixed Asset maintenance</option>
+                ${Object.keys(state.settings.paymentTypeMappings || {}).map(type => `
+                  <option value="${type}">${type}</option>
+                `).join('')}
               </select>
             </div>
 
@@ -660,6 +661,11 @@ export function renderExpensesLog(container) {
     container: container.querySelector('#expenses-table-mount'),
     headers: headers,
     data: dbState.state.expenses,
+    onDeleteSelected: (selectedRows) => {
+      const ids = selectedRows.map(row => row.expense_id);
+      dbState.deleteExpenses(ids);
+      renderExpensesLog(container);
+    },
     onImportCSV: (importedRows) => {
       importedRows.forEach(row => {
         const bankNameStr = String(row.bank_name || row['paid from'] || '').toLowerCase();
@@ -708,6 +714,11 @@ export function renderIncomeLog(container) {
     container: container.querySelector('#income-table-mount'),
     headers: headers,
     data: dbState.state.income,
+    onDeleteSelected: (selectedRows) => {
+      const ids = selectedRows.map(row => row.income_id);
+      dbState.deleteIncome(ids);
+      renderIncomeLog(container);
+    },
     onImportCSV: (importedRows) => {
       importedRows.forEach(row => {
         const bankNameStr = String(row.bank_name || row['target account'] || '').toLowerCase();
@@ -762,7 +773,8 @@ export function renderLedger(container) {
           description: entry.description,
           account: leg.account,
           debit_amount: leg.type === 'DEBIT' ? leg.amount : null,
-          credit_amount: leg.type === 'CREDIT' ? leg.amount : null
+          credit_amount: leg.type === 'CREDIT' ? leg.amount : null,
+          entry_id: entry.entry_id
         });
       });
     });
@@ -775,13 +787,23 @@ export function renderLedger(container) {
     { key: 'description', label: 'Transaction Description' },
     { key: 'account', label: 'Ledger Account' },
     { key: 'debit_amount', label: 'Debit (Dr)', render: val => val ? `<span style="color: var(--debit-color); font-weight: 600;">${inrFormat.format(val)}</span>` : '--' },
-    { key: 'credit_amount', label: 'Credit (Cr)', render: val => val ? `<span style="color: var(--credit-color); font-weight: 600;">${inrFormat.format(val)}</span>` : '--' }
+    { key: 'credit_amount', label: 'Credit (Cr)', render: val => val ? `<span style="color: var(--credit-color); font-weight: 600;">${inrFormat.format(val)}</span>` : '--' },
+    { key: 'actions', label: 'Actions', render: (val, row) => `
+      <button class="btn btn-secondary btn-edit-ledger-row" data-id="${row.entry_id}" style="padding: 4px 8px; font-size: 0.75rem;"><i data-lucide="edit-3" style="width: 12px; height: 12px; margin-right: 4px; vertical-align: middle;"></i>Edit</button>
+    ` }
   ];
 
+  const tableMount = container.querySelector('#ledger-table-mount');
+
   const table = new GlassTable({
-    container: container.querySelector('#ledger-table-mount'),
+    container: tableMount,
     headers: headers,
     data: getLedgerLines(),
+    onDeleteSelected: (selectedRows) => {
+      const ids = selectedRows.map(row => row.entry_id);
+      dbState.deleteLedgerEntries(ids);
+      renderLedger(container);
+    },
     onImportCSV: (importedRows) => {
       // Group rows by reference_number + date + description to form double-entry journal entries
       const groups = {};
@@ -838,7 +860,244 @@ export function renderLedger(container) {
     }
   });
 
+  // Event delegation for row edit
+  tableMount.addEventListener('click', (e) => {
+    const editBtn = e.target.closest('.btn-edit-ledger-row');
+    if (editBtn) {
+      const entryId = editBtn.dataset.id;
+      const entry = dbState.state.ledgerEntries.find(le => le.entry_id === entryId);
+      if (entry) {
+        showEditLedgerModal(entry, container);
+      }
+    }
+  });
+
   if (window.lucide) {
     window.lucide.createIcons();
+  }
+}
+
+function showEditLedgerModal(entry, container) {
+  let legsHtml = '';
+  entry.legs.forEach((leg, idx) => {
+    legsHtml += `
+      <tr class="ledger-leg-row" data-index="${idx}" style="border-bottom: 1px solid var(--border-glass);">
+        <td style="padding: 6px 4px;">
+          <input type="text" class="form-control leg-account" value="${leg.account}" style="padding: 4px 6px; font-size: 0.8rem;" placeholder="Account Name" required>
+        </td>
+        <td style="padding: 6px 4px; width: 120px;">
+          <select class="leg-type" style="padding: 4px 6px; font-size: 0.8rem; width: 100%;">
+            <option value="DEBIT" ${leg.type === 'DEBIT' ? 'selected' : ''}>Debit (Dr)</option>
+            <option value="CREDIT" ${leg.type === 'CREDIT' ? 'selected' : ''}>Credit (Cr)</option>
+          </select>
+        </td>
+        <td style="padding: 6px 4px; width: 140px;">
+          <input type="number" step="0.01" class="form-control leg-amount" value="${leg.amount}" style="padding: 4px 6px; font-size: 0.8rem; text-align: right;" required>
+        </td>
+        <td style="padding: 6px 4px; width: 40px; text-align: center;">
+          <button type="button" class="btn-delete-leg" style="background: transparent; border: none; color: var(--credit-color); cursor: pointer; font-size: 1.15rem; line-height: 1;">&times;</button>
+        </td>
+      </tr>
+    `;
+  });
+
+  const bodyHtml = `
+    <div style="max-height: 70vh; overflow-y: auto; text-align: left;">
+      <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px;">
+        <div class="form-group">
+          <label for="led-date">Entry Date *</label>
+          <input type="date" id="led-date" class="form-control" value="${entry.date}" required>
+        </div>
+        <div class="form-group">
+          <label for="led-ref">Reference No *</label>
+          <input type="text" id="led-ref" class="form-control" value="${entry.reference_number}" required>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom: 20px;">
+        <label for="led-desc">Description *</label>
+        <input type="text" id="led-desc" class="form-control" value="${entry.description}" required>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--accent-color); margin: 0;">Ledger Legs (Double-Entry Splits)</h4>
+        <button type="button" class="btn btn-secondary" id="btn-add-leg-row" style="padding: 4px 10px; font-size: 0.75rem;">
+          <i data-lucide="plus" style="width: 12px; height: 12px; margin-right: 4px; vertical-align: middle;"></i> Add Leg
+        </button>
+      </div>
+
+      <table style="width: 100%; border-collapse: collapse; font-size: 0.8rem; margin-bottom: 15px;" id="ledger-legs-table">
+        <thead>
+          <tr style="border-bottom: 1px solid var(--border-glass); text-align: left; opacity: 0.7;">
+            <th style="padding: 6px 4px;">Account Name *</th>
+            <th style="padding: 6px 4px; width: 120px;">Type (Dr/Cr) *</th>
+            <th style="padding: 6px 4px; width: 140px; text-align: right;">Amount (₹) *</th>
+            <th style="padding: 6px 4px; width: 40px; text-align: center;"></th>
+          </tr>
+        </thead>
+        <tbody id="ledger-legs-tbody">${legsHtml}</tbody>
+      </table>
+
+      <div style="padding: 12px; background: rgba(255, 255, 255, 0.02); border-radius: var(--border-radius-sm); border: 1px solid var(--border-glass); font-size: 0.85rem;">
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+          <span style="color: var(--text-secondary);">Total Debits:</span>
+          <span id="led-summary-debits" style="font-weight: 600; color: var(--debit-color);">₹0.00</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+          <span style="color: var(--text-secondary);">Total Credits:</span>
+          <span id="led-summary-credits" style="font-weight: 600; color: var(--credit-color);">₹0.00</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; border-top: 1px solid var(--border-glass); padding-top: 4px; font-weight: 700;">
+          <span id="led-summary-diff-label" style="color: var(--text-secondary);">Discrepancy:</span>
+          <span id="led-summary-diff" style="color: var(--credit-color);">₹0.00</span>
+        </div>
+      </div>
+    </div>
+  `;
+
+  showModal('Edit Ledger Entry Vouchers', bodyHtml, (formEl) => {
+    const date = formEl.querySelector('#led-date').value;
+    const reference_number = formEl.querySelector('#led-ref').value;
+    const description = formEl.querySelector('#led-desc').value;
+
+    const legs = [];
+    let debits = 0;
+    let credits = 0;
+
+    formEl.querySelectorAll('.ledger-leg-row').forEach(row => {
+      const accountName = row.querySelector('.leg-account').value.trim();
+      const type = row.querySelector('.leg-type').value;
+      const amount = parseFloat(row.querySelector('.leg-amount').value) || 0;
+
+      if (accountName && amount > 0) {
+        legs.push({
+          account: accountName,
+          type: type,
+          amount: round(amount)
+        });
+        if (type === 'DEBIT') debits = round(debits + amount);
+        else credits = round(credits + amount);
+      }
+    });
+
+    if (legs.length < 2) {
+      alert('A general journal voucher must have at least 2 legs.');
+      return false;
+    }
+
+    if (debits !== credits) {
+      alert(`Double-entry check failed. Total Debits (₹${debits}) must equal Total Credits (₹${credits}).`);
+      return false;
+    }
+
+    // Commit the update
+    const updateResult = dbState.updateLedgerEntry(entry.entry_id, {
+      date,
+      reference_number,
+      description,
+      legs
+    });
+
+    if (updateResult.success) {
+      renderLedger(container);
+      return true;
+    } else {
+      alert(`Error updating: ${updateResult.error}`);
+      return false;
+    }
+  }, '650px');
+
+  // Bind dynamic leg builder handlers inside the modal overlay
+  const overlay = document.querySelector('.modal-overlay');
+  if (overlay) {
+    setupLedgerEditInteractions(overlay);
+  }
+}
+
+function setupLedgerEditInteractions(modalEl) {
+  const tbody = modalEl.querySelector('#ledger-legs-tbody');
+  const btnAdd = modalEl.querySelector('#btn-add-leg-row');
+
+  let rowCount = tbody.querySelectorAll('.ledger-leg-row').length;
+
+  function addRow() {
+    const tr = document.createElement('tr');
+    tr.className = 'ledger-leg-row';
+    tr.dataset.index = rowCount;
+    tr.style.borderBottom = '1px solid rgba(255, 255, 255, 0.05)';
+    tr.innerHTML = `
+      <td style="padding: 6px 4px;">
+        <input type="text" class="form-control leg-account" style="padding: 4px 6px; font-size: 0.8rem;" placeholder="Account Name" required>
+      </td>
+      <td style="padding: 6px 4px; width: 120px;">
+        <select class="leg-type" style="padding: 4px 6px; font-size: 0.8rem; width: 100%;">
+          <option value="DEBIT">Debit (Dr)</option>
+          <option value="CREDIT">Credit (Cr)</option>
+        </select>
+      </td>
+      <td style="padding: 6px 4px; width: 140px;">
+        <input type="number" step="0.01" class="form-control leg-amount" value="0.00" style="padding: 4px 6px; font-size: 0.8rem; text-align: right;" required>
+      </td>
+      <td style="padding: 6px 4px; width: 40px; text-align: center;">
+        <button type="button" class="btn-delete-leg" style="background: transparent; border: none; color: var(--credit-color); cursor: pointer; font-size: 1.15rem; line-height: 1;">&times;</button>
+      </td>
+    `;
+
+    tbody.appendChild(tr);
+    rowCount++;
+
+    tr.querySelector('.leg-amount').addEventListener('input', () => recalculateLedgerEditTotals(modalEl));
+    tr.querySelector('.leg-type').addEventListener('change', () => recalculateLedgerEditTotals(modalEl));
+    
+    tr.querySelector('.btn-delete-leg').addEventListener('click', () => {
+      tr.remove();
+      recalculateLedgerEditTotals(modalEl);
+    });
+
+    recalculateLedgerEditTotals(modalEl);
+  }
+
+  if (btnAdd) {
+    btnAdd.addEventListener('click', addRow);
+  }
+
+  tbody.querySelectorAll('.ledger-leg-row').forEach(row => {
+    row.querySelector('.leg-amount').addEventListener('input', () => recalculateLedgerEditTotals(modalEl));
+    row.querySelector('.leg-type').addEventListener('change', () => recalculateLedgerEditTotals(modalEl));
+    row.querySelector('.btn-delete-leg').addEventListener('click', () => {
+      row.remove();
+      recalculateLedgerEditTotals(modalEl);
+    });
+  });
+
+  recalculateLedgerEditTotals(modalEl);
+}
+
+function recalculateLedgerEditTotals(modalEl) {
+  let debits = 0;
+  let credits = 0;
+  
+  modalEl.querySelectorAll('.ledger-leg-row').forEach(row => {
+    const type = row.querySelector('.leg-type').value;
+    const amount = parseFloat(row.querySelector('.leg-amount').value) || 0;
+    if (type === 'DEBIT') debits = round(debits + amount);
+    else credits = round(credits + amount);
+  });
+
+  const diff = round(Math.abs(debits - credits));
+  
+  modalEl.querySelector('#led-summary-debits').textContent = inrFormat.format(debits);
+  modalEl.querySelector('#led-summary-credits').textContent = inrFormat.format(credits);
+  
+  const diffEl = modalEl.querySelector('#led-summary-diff');
+  const diffLabel = modalEl.querySelector('#led-summary-diff-label');
+
+  if (diff === 0) {
+    diffEl.textContent = '₹0.00 (Balanced)';
+    diffEl.style.color = 'var(--debit-color)';
+    diffLabel.style.color = 'var(--text-secondary)';
+  } else {
+    diffEl.textContent = `${inrFormat.format(diff)} (Out of Balance)`;
+    diffEl.style.color = 'var(--credit-color)';
+    diffLabel.style.color = 'var(--credit-color)';
   }
 }

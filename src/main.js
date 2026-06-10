@@ -44,7 +44,7 @@ const routeDisplayNames = {
   'vendors': 'Accounts Payable Vendor Directory',
   'employees': 'Staff Master Directory',
   'attendance': 'Daily Attendance Overtime Matrix',
-  'documents': 'Compliant Documents Locker',
+  'employee-advances': 'Employee Salary Advances Board',
   'settings': 'Corporate & Accounting Settings',
   'audit-log': 'Immutable System Audit trails'
 };
@@ -169,7 +169,7 @@ function mountActiveView(container) {
       break;
     case 'employees':
     case 'attendance':
-    case 'documents':
+    case 'employee-advances':
       renderHR(container, currentRoute);
       break;
     case 'settings':

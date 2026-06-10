@@ -422,7 +422,10 @@ function renderCustomers(container) {
 
   container.innerHTML = `
     <div class="glass-panel" style="padding: 24px;">
-      <h3 style="font-size: 1.15rem; margin-bottom: 20px; font-weight: 700;">CRM Customer Directory & Receivables Balance</h3>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+        <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0;">CRM Customer Directory & Receivables Balance</h3>
+        <button class="btn btn-primary" id="btn-add-customer"><i data-lucide="plus"></i> Add Customer</button>
+      </div>
       <div id="customers-table-mount"></div>
     </div>
   `;
@@ -440,6 +443,11 @@ function renderCustomers(container) {
     container: container.querySelector('#customers-table-mount'),
     headers: headers,
     data: state.customers,
+    onDeleteSelected: (selectedRows) => {
+      const ids = selectedRows.map(row => row.id);
+      dbState.deleteCustomers(ids);
+      renderCustomers(container);
+    },
     onImportCSV: (importedRows) => {
       importedRows.forEach(row => {
         dbState.createCustomer({
@@ -451,7 +459,70 @@ function renderCustomers(container) {
           outstanding: parseFloat(String(row.outstanding || row['outstanding receivables (₹)']).replace(/[^\d.]/g, '')) || 0
         });
       });
-      table.setData(dbState.state.customers);
+      renderCustomers(container);
+    }
+  });
+
+  // Bind Add Customer button
+  container.querySelector('#btn-add-customer').addEventListener('click', () => {
+    const formHtml = `
+      <div style="text-align: left;">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="cust-name">Company Name *</label>
+          <input type="text" id="cust-name" class="form-control" placeholder="e.g. Acme Builders Ltd" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="cust-contact">Primary Contact Person *</label>
+          <input type="text" id="cust-contact" class="form-control" placeholder="e.g. John Doe" required>
+        </div>
+        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div class="form-group">
+            <label for="cust-email">Email Address</label>
+            <input type="email" id="cust-email" class="form-control" placeholder="e.g. info@acme.com">
+          </div>
+          <div class="form-group">
+            <label for="cust-phone">Mobile Number</label>
+            <input type="tel" id="cust-phone" class="form-control" placeholder="e.g. 9876543210">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="cust-outstanding">Initial Outstanding Receivables (₹)</label>
+          <input type="number" step="0.01" id="cust-outstanding" class="form-control" placeholder="0.00" value="0.00">
+        </div>
+      </div>
+    `;
+
+    showModal('Add New Customer', formHtml, (formEl) => {
+      try {
+        const payload = {
+          name: formEl.querySelector('#cust-name').value,
+          contact: formEl.querySelector('#cust-contact').value,
+          email: formEl.querySelector('#cust-email').value,
+          phone: formEl.querySelector('#cust-phone').value,
+          outstanding: parseFloat(formEl.querySelector('#cust-outstanding').value) || 0
+        };
+
+        dbState.createCustomer(payload);
+        renderCustomers(container);
+        return true;
+      } catch (err) {
+        alert(err.message);
+        return false;
+      }
+    });
+
+    const modalEl = document.querySelector('.modal-overlay');
+    if (modalEl) {
+      const btnAutofill = modalEl.querySelector('.btn-modal-autofill');
+      if (btnAutofill) {
+        btnAutofill.addEventListener('click', () => {
+          modalEl.querySelector('#cust-name').value = 'Lodha Developers';
+          modalEl.querySelector('#cust-contact').value = 'Amit Lodha';
+          modalEl.querySelector('#cust-email').value = 'amit@lodha.in';
+          modalEl.querySelector('#cust-phone').value = '9812345678';
+          modalEl.querySelector('#cust-outstanding').value = '550000.00';
+        });
+      }
     }
   });
 
@@ -466,7 +537,10 @@ function renderVendors(container) {
 
   container.innerHTML = `
     <div class="glass-panel" style="padding: 24px;">
-      <h3 style="font-size: 1.15rem; margin-bottom: 20px; font-weight: 700;">Vendor Directory & Accounts Payable</h3>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+        <h3 style="font-size: 1.15rem; font-weight: 700; margin: 0;">Vendor Directory & Accounts Payable</h3>
+        <button class="btn btn-primary" id="btn-add-vendor"><i data-lucide="plus"></i> Add Vendor</button>
+      </div>
       <div id="vendors-table-mount"></div>
     </div>
   `;
@@ -484,6 +558,11 @@ function renderVendors(container) {
     container: container.querySelector('#vendors-table-mount'),
     headers: headers,
     data: state.vendors,
+    onDeleteSelected: (selectedRows) => {
+      const ids = selectedRows.map(row => row.id);
+      dbState.deleteVendors(ids);
+      renderVendors(container);
+    },
     onImportCSV: (importedRows) => {
       importedRows.forEach(row => {
         dbState.createVendor({
@@ -495,7 +574,70 @@ function renderVendors(container) {
           outstanding: parseFloat(String(row.outstanding || row['accounts payable owed (₹)']).replace(/[^\d.]/g, '')) || 0
         });
       });
-      table.setData(dbState.state.vendors);
+      renderVendors(container);
+    }
+  });
+
+  // Bind Add Vendor button
+  container.querySelector('#btn-add-vendor').addEventListener('click', () => {
+    const formHtml = `
+      <div style="text-align: left;">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="vend-name">Supplier Company Name *</label>
+          <input type="text" id="vend-name" class="form-control" placeholder="e.g. Asahi Glass India" required>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="vend-contact">Sales Contact Person *</label>
+          <input type="text" id="vend-contact" class="form-control" placeholder="e.g. Jane Smith" required>
+        </div>
+        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+          <div class="form-group">
+            <label for="vend-email">Email Address</label>
+            <input type="email" id="vend-email" class="form-control" placeholder="e.g. sales@asahi.com">
+          </div>
+          <div class="form-group">
+            <label for="vend-phone">Mobile Number</label>
+            <input type="tel" id="vend-phone" class="form-control" placeholder="e.g. 9811223344">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="vend-outstanding">Initial Payable Balance (₹)</label>
+          <input type="number" step="0.01" id="vend-outstanding" class="form-control" placeholder="0.00" value="0.00">
+        </div>
+      </div>
+    `;
+
+    showModal('Add New Vendor', formHtml, (formEl) => {
+      try {
+        const payload = {
+          name: formEl.querySelector('#vend-name').value,
+          contact: formEl.querySelector('#vend-contact').value,
+          email: formEl.querySelector('#vend-email').value,
+          phone: formEl.querySelector('#vend-phone').value,
+          outstanding: parseFloat(formEl.querySelector('#vend-outstanding').value) || 0
+        };
+
+        dbState.createVendor(payload);
+        renderVendors(container);
+        return true;
+      } catch (err) {
+        alert(err.message);
+        return false;
+      }
+    });
+
+    const modalEl = document.querySelector('.modal-overlay');
+    if (modalEl) {
+      const btnAutofill = modalEl.querySelector('.btn-modal-autofill');
+      if (btnAutofill) {
+        btnAutofill.addEventListener('click', () => {
+          modalEl.querySelector('#vend-name').value = 'Pilkington Glass';
+          modalEl.querySelector('#vend-contact').value = 'Robert Pilkington';
+          modalEl.querySelector('#vend-email').value = 'orders@pilkington.com';
+          modalEl.querySelector('#vend-phone').value = '7611223344';
+          modalEl.querySelector('#vend-outstanding').value = '250000.00';
+        });
+      }
     }
   });
 
@@ -505,7 +647,7 @@ function renderVendors(container) {
 }
 
 // Reusable overlay glass modal UI helper
-function showModal(title, bodyHtml, onSave, customWidth = '500px') {
+export function showModal(title, bodyHtml, onSave, customWidth = '500px') {
   let overlay = document.querySelector('.modal-overlay');
   if (!overlay) {
     overlay = document.createElement('div');

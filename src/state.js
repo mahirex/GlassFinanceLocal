@@ -1071,6 +1071,175 @@ class GlassERPState {
     this.saveState();
     return newAcc;
   }
+
+  // DELETE BANK ACCOUNTS
+  deleteBankAccounts(ids) {
+    return this.executeTransaction(() => {
+      const preState = clone(this.state);
+      this.state.bankAccounts = this.state.bankAccounts.filter(acc => !ids.includes(acc.bank_id));
+      this.logAudit('DELETE_BANK_ACCOUNTS', 'bankAccounts', preState, this.state);
+    });
+  }
+
+  // UPDATE LEDGER ENTRY
+  updateLedgerEntry(entryId, updatedEntry) {
+    return this.executeTransaction(() => {
+      const idx = this.state.ledgerEntries.findIndex(e => e.entry_id === entryId);
+      if (idx === -1) throw new Error('Ledger entry not found.');
+      
+      const preState = clone(this.state);
+      this.state.ledgerEntries[idx] = {
+        ...this.state.ledgerEntries[idx],
+        ...updatedEntry,
+        entry_id: entryId // preserve ID
+      };
+      
+      this.logAudit('UPDATE_LEDGER_ENTRY', `ledgerEntries/${entryId}`, preState, this.state);
+      return this.state.ledgerEntries[idx];
+    });
+  }
+
+  // DELETE LEDGER ENTRIES
+  deleteLedgerEntries(ids) {
+    return this.executeTransaction(() => {
+      const preState = clone(this.state);
+      this.state.ledgerEntries = this.state.ledgerEntries.filter(entry => !ids.includes(entry.entry_id));
+      this.logAudit('DELETE_LEDGER_ENTRIES', 'ledgerEntries', preState, this.state);
+    });
+  }
+
+  // DELETE PROJECTS
+  deleteProjects(ids) {
+    return this.executeTransaction(() => {
+      const preState = clone(this.state);
+      this.state.projects = this.state.projects.filter(p => !ids.includes(p.project_id));
+      this.state.projectCosts = this.state.projectCosts.filter(c => !ids.includes(c.project_id));
+      this.logAudit('DELETE_PROJECTS', 'projects', preState, this.state);
+    });
+  }
+
+  // UPDATE PROJECT STATUS (Kanban drag and drop status updates)
+  updateProjectStatus(projectId, newStatus) {
+    return this.executeTransaction(() => {
+      const proj = this.state.projects.find(p => p.project_id === projectId);
+      if (!proj) throw new Error(`Project with ID ${projectId} not found.`);
+      
+      const preState = clone(this.state);
+      proj.status = newStatus;
+      
+      this.logAudit('UPDATE_PROJECT_STATUS', `projects/${projectId}`, preState, this.state);
+      return proj;
+    });
+  }
+
+  // DELETE CUSTOMERS
+  deleteCustomers(ids) {
+    return this.executeTransaction(() => {
+      const preState = clone(this.state);
+      this.state.customers = this.state.customers.filter(c => !ids.includes(c.id));
+      this.logAudit('DELETE_CUSTOMERS', 'customers', preState, this.state);
+    });
+  }
+
+  // DELETE VENDORS
+  deleteVendors(ids) {
+    return this.executeTransaction(() => {
+      const preState = clone(this.state);
+      this.state.vendors = this.state.vendors.filter(v => !ids.includes(v.id));
+      this.logAudit('DELETE_VENDORS', 'vendors', preState, this.state);
+    });
+  }
+
+  // DELETE EMPLOYEES
+  deleteEmployees(ids) {
+    return this.executeTransaction(() => {
+      const preState = clone(this.state);
+      this.state.employees = this.state.employees.filter(e => !ids.includes(e.employee_id));
+      this.logAudit('DELETE_EMPLOYEES', 'employees', preState, this.state);
+    });
+  }
+
+  // DELETE QUOTATIONS
+  deleteQuotations(ids) {
+    return this.executeTransaction(() => {
+      const preState = clone(this.state);
+      this.state.quotations = this.state.quotations.filter(q => !ids.includes(q.id));
+      this.logAudit('DELETE_QUOTATIONS', 'quotations', preState, this.state);
+    });
+  }
+
+  // DELETE INVENTORY ITEMS
+  deleteInventoryItems(ids) {
+    return this.executeTransaction(() => {
+      const preState = clone(this.state);
+      this.state.inventory = this.state.inventory.filter(item => !ids.includes(item.id));
+      this.logAudit('DELETE_INVENTORY', 'inventory', preState, this.state);
+    });
+  }
+
+  // DELETE EXPENSES
+  deleteExpenses(ids) {
+    return this.executeTransaction(() => {
+      const preState = clone(this.state);
+      const expensesToDelete = this.state.expenses.filter(e => ids.includes(e.expense_id));
+      
+      // Pull references
+      const refs = expensesToDelete.map(e => e.reference_no);
+      
+      // Delete expenses
+      this.state.expenses = this.state.expenses.filter(e => !ids.includes(e.expense_id));
+      
+      // Delete matching general ledger entries
+      this.state.ledgerEntries = this.state.ledgerEntries.filter(entry => !refs.includes(entry.reference_number));
+      
+      // Delete matching GST transactions
+      this.state.gstTransactions = this.state.gstTransactions.filter(gst => !refs.includes(gst.invoice_no));
+      
+      // Delete matching project costs
+      this.state.projectCosts = this.state.projectCosts.filter(c => !refs.includes(c.description?.split('ref: ')?.[1]));
+      
+      // Restore vendor outstandings if they were Vendor Payments
+      expensesToDelete.forEach(exp => {
+        if (exp.payment_type === 'Vendor Payment' && exp.vendor_id) {
+          const vendor = this.state.vendors.find(v => v.id === exp.vendor_id);
+          if (vendor) {
+            vendor.outstanding = round(vendor.outstanding + exp.amount);
+          }
+        }
+      });
+
+      this.logAudit('DELETE_EXPENSES', 'expenses', preState, this.state);
+    });
+  }
+
+  // DELETE INCOME
+  deleteIncome(ids) {
+    return this.executeTransaction(() => {
+      const preState = clone(this.state);
+      const incomeToDelete = this.state.income.filter(inc => ids.includes(inc.income_id));
+      
+      // Pull references
+      const refs = incomeToDelete.map(inc => inc.reference_no);
+      
+      // Delete income
+      this.state.income = this.state.income.filter(inc => !ids.includes(inc.income_id));
+      
+      // Delete matching general ledger entries
+      this.state.ledgerEntries = this.state.ledgerEntries.filter(entry => !refs.includes(entry.reference_number));
+      
+      // Restore customer outstandings if they were Customer Payments
+      incomeToDelete.forEach(inc => {
+        if (inc.inflow_category === 'Customer Payment' && inc.customer_id) {
+          const customer = this.state.customers.find(c => c.id === inc.customer_id);
+          if (customer) {
+            customer.outstanding = round(customer.outstanding + inc.amount);
+          }
+        }
+      });
+
+      this.logAudit('DELETE_INCOME', 'income', preState, this.state);
+    });
+  }
 }
 
 export const dbState = new GlassERPState();

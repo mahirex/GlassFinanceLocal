@@ -38,7 +38,7 @@ export function renderSidebar(container, activeRoute, onNavigate) {
       items: [
         { route: 'employees', label: 'Employees', icon: 'contact' },
         { route: 'attendance', label: 'Attendance', icon: 'calendar-days' },
-        { route: 'documents', label: 'Documents', icon: 'folder-lock' }
+        { route: 'employee-advances', label: 'Employee Advances', icon: 'coins' }
       ]
     },
     {
@@ -74,6 +74,7 @@ export function renderSidebar(container, activeRoute, onNavigate) {
     section.items.forEach(item => {
       const a = document.createElement('a');
       a.className = `menu-item ${activeRoute === item.route ? 'active' : ''}`;
+      a.dataset.route = item.route;
       a.innerHTML = `
         <i data-lucide="${item.icon}"></i>
         <span>${item.label}</span>

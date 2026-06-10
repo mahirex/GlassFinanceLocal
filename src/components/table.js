@@ -8,6 +8,7 @@ export class GlassTable {
     this.onRowClick = options.onRowClick || null;
     this.onBulkAction = options.onBulkAction || null;
     this.onImportCSV = options.onImportCSV || null;
+    this.onDeleteSelected = options.onDeleteSelected || null;
     
     // Pagination & Search States
     this.pageSize = options.pageSize || 25;
@@ -25,6 +26,7 @@ export class GlassTable {
   init() {
     this.renderLayout();
     this.update();
+    this.updateBulkDeleteButton();
   }
 
   setData(newData) {
@@ -32,6 +34,7 @@ export class GlassTable {
     this.selectedRows.clear();
     this.currentPage = 1;
     this.update();
+    this.updateBulkDeleteButton();
   }
 
   renderLayout() {
@@ -47,6 +50,7 @@ export class GlassTable {
 
         <!-- Right: Actions & Column Visibility -->
         <div style="display: flex; gap: 10px; align-items: center;">
+          <button class="btn btn-secondary btn-delete-selected" style="display: none; background: var(--credit-bg); color: var(--credit-color); border: 1px solid rgba(239, 68, 68, 0.2);"><i data-lucide="trash-2"></i> Delete Selected</button>
           <button class="btn btn-secondary btn-export-csv" title="Export as CSV"><i data-lucide="download"></i> Export CSV</button>
           <button class="btn btn-secondary btn-print" title="Print List"><i data-lucide="printer"></i> Print</button>
           
@@ -164,6 +168,22 @@ export class GlassTable {
     this.container.querySelector('.btn-export-csv').addEventListener('click', () => this.exportCSV());
     this.container.querySelector('.btn-print').addEventListener('click', () => window.print());
 
+    // Delete Selected action
+    const deleteBtn = this.container.querySelector('.btn-delete-selected');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', () => {
+        this.showConfirmModal(
+          'Confirm Permanent Deletion',
+          `Are you sure you want to permanently delete the ${this.selectedRows.size} selected items? This action cannot be undone.`,
+          () => {
+            if (this.onDeleteSelected) {
+              this.onDeleteSelected(Array.from(this.selectedRows));
+            }
+          }
+        );
+      });
+    }
+
     // CSV Ingest Selector
     const csvFileInput = this.container.querySelector('.csv-file-input');
     csvFileInput.addEventListener('change', (e) => {
@@ -225,6 +245,7 @@ export class GlassTable {
         pageData.forEach(row => this.selectedRows.delete(row));
       }
       this.updateRows();
+      this.updateBulkDeleteButton();
       if (this.onBulkAction) this.onBulkAction(Array.from(this.selectedRows));
     });
   }
@@ -313,6 +334,7 @@ export class GlassTable {
         } else {
           this.selectedRows.delete(row);
         }
+        this.updateBulkDeleteButton();
         if (this.onBulkAction) this.onBulkAction(Array.from(this.selectedRows));
       });
       tr.appendChild(tdSelect);
@@ -448,6 +470,49 @@ export class GlassTable {
 
     if (this.onImportCSV) {
       this.onImportCSV(importedData);
+    }
+  }
+
+  updateBulkDeleteButton() {
+    const deleteBtn = this.container.querySelector('.btn-delete-selected');
+    if (deleteBtn) {
+      if (this.onDeleteSelected && this.selectedRows.size > 0) {
+        deleteBtn.style.display = 'inline-flex';
+      } else {
+        deleteBtn.style.display = 'none';
+      }
+    }
+  }
+
+  showConfirmModal(title, message, onConfirm) {
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay active';
+    modal.style.zIndex = '99999';
+    modal.innerHTML = `
+      <div class="modal-content glass-panel" style="max-width: 400px; text-align: center; margin-top: 25vh; border: 1px solid var(--credit-color);">
+        <h3 style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700; margin-bottom: 12px; color: var(--text-primary);">${title}</h3>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 20px; line-height: 1.4;">${message}</p>
+        <div style="display: flex; gap: 12px; justify-content: center;">
+          <button type="button" class="btn btn-secondary btn-confirm-cancel">Cancel</button>
+          <button type="button" class="btn btn-primary btn-confirm-yes" style="background: var(--credit-color); color: #fff;">Delete Permanently</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    const close = () => {
+      modal.classList.remove('active');
+      setTimeout(() => modal.remove(), 300);
+    };
+
+    modal.querySelector('.btn-confirm-cancel').addEventListener('click', close);
+    modal.querySelector('.btn-confirm-yes').addEventListener('click', () => {
+      onConfirm();
+      close();
+    });
+    
+    if (window.lucide) {
+      window.lucide.createIcons();
     }
   }
 }
