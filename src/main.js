@@ -50,9 +50,41 @@ const routeDisplayNames = {
 };
 
 // Initialize Application Layout
-function initApp() {
+async function initApp() {
   const appContainer = document.getElementById('app');
   if (!appContainer) return;
+
+  // Render premium loading screen
+  appContainer.innerHTML = `
+    <style>
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      .loading-spinner {
+        border: 3px solid rgba(255, 255, 255, 0.05);
+        border-top: 3px solid #6366f1;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        animation: spin 0.8s linear infinite;
+        margin: 0 auto 16px;
+      }
+    </style>
+    <div style="display:flex; justify-content:center; align-items:center; height:100vh; width:100vw; background-color:#080b11; color:#f3f4f6; font-family:'Outfit', sans-serif; position:fixed; top:0; left:0; z-index:9999;">
+      <div style="text-align:center;">
+        <div class="loading-spinner"></div>
+        <div style="font-size:0.95rem; font-weight:600; letter-spacing:0.02em; color:#9ca3af;">Connecting to Secure Cloud Ledger...</div>
+      </div>
+    </div>
+  `;
+
+  // Asynchronously initialize state from Supabase
+  try {
+    await dbState.init();
+  } catch (error) {
+    console.error('Failed to load cloud state:', error);
+  }
 
   appContainer.innerHTML = `
     <!-- Left Navigation sidebar -->

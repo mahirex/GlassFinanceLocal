@@ -1,6 +1,7 @@
 // GlassERP Pro V2 State Management & Double-Entry Accounting Engine
 
 import { initialBankAccounts, initialEmployees, initialProjects, initialLedgerEntries, initialSettings } from './mockData.js';
+import { supabase } from './supabase.js';
 
 // Deep clone helper
 function clone(obj) {
@@ -25,6 +26,51 @@ class GlassERPState {
   constructor() {
     this.listeners = [];
     this.loadState();
+  }
+
+  async init() {
+    if (!supabase) {
+      this.loadState();
+      return;
+    }
+    await this.loadStateFromSupabase();
+  }
+
+  async loadStateFromSupabase() {
+    try {
+      const { data, error } = await supabase
+        .from('glasserp_state')
+        .select('state')
+        .eq('id', 1)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          console.log('No state found in Supabase. Seeding database state...');
+          this.seedInitialData();
+          await this.saveStateToSupabase();
+        } else {
+          throw error;
+        }
+      } else if (data && data.state) {
+        this.state = data.state;
+        this.pruneExistingAuditLogs();
+      }
+    } catch (e) {
+      console.error('Failed to load state from Supabase, falling back to local storage:', e);
+      this.loadState();
+    }
+  }
+
+  async saveStateToSupabase() {
+    if (!supabase) return;
+    const { error } = await supabase
+      .from('glasserp_state')
+      .upsert({ id: 1, state: this.state, updated_at: new Date().toISOString() });
+    
+    if (error) {
+      throw error;
+    }
   }
 
   pruneExistingAuditLogs() {
@@ -284,6 +330,12 @@ class GlassERPState {
       localStorage.setItem('glasserp_state_v2', JSON.stringify(this.state));
     }
     this.notify();
+
+    if (supabase) {
+      this.saveStateToSupabase().catch(err => {
+        console.error('Failed to sync state to Supabase:', err);
+      });
+    }
   }
 
   subscribe(listener) {
