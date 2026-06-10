@@ -4,6 +4,7 @@ import { dbState } from '../state.js';
 import { showModal } from './operations.js';
 
 let currentSettingsTab = 'profile'; // Tab persist at module level
+let settingsFeedbackMessage = '';
 
 export function renderSettings(container) {
   const state = dbState.state;
@@ -73,13 +74,58 @@ export function renderSettings(container) {
               <div class="form-group">
                 <label for="set-state">GST State Code Location *</label>
                 <select id="set-state" style="width:100%;">
-                  <option value="27" ${state.settings.gstStateCode === '27' ? 'selected' : ''}>State 27 - Maharashtra</option>
-                  <option value="29" ${state.settings.gstStateCode === '29' ? 'selected' : ''}>State 29 - Karnataka</option>
-                  <option value="07" ${state.settings.gstStateCode === '07' ? 'selected' : ''}>State 07 - Delhi NCR</option>
+                  <option value="01" ${state.settings.gstStateCode === '01' ? 'selected' : ''}>State 01 - Jammu & Kashmir</option>
+                  <option value="02" ${state.settings.gstStateCode === '02' ? 'selected' : ''}>State 02 - Himachal Pradesh</option>
+                  <option value="03" ${state.settings.gstStateCode === '03' ? 'selected' : ''}>State 03 - Punjab</option>
+                  <option value="04" ${state.settings.gstStateCode === '04' ? 'selected' : ''}>State 04 - Chandigarh</option>
+                  <option value="05" ${state.settings.gstStateCode === '05' ? 'selected' : ''}>State 05 - Uttarakhand</option>
+                  <option value="06" ${state.settings.gstStateCode === '06' ? 'selected' : ''}>State 06 - Haryana</option>
+                  <option value="07" ${state.settings.gstStateCode === '07' ? 'selected' : ''}>State 07 - Delhi</option>
+                  <option value="08" ${state.settings.gstStateCode === '08' ? 'selected' : ''}>State 08 - Rajasthan</option>
+                  <option value="09" ${state.settings.gstStateCode === '09' ? 'selected' : ''}>State 09 - Uttar Pradesh</option>
+                  <option value="10" ${state.settings.gstStateCode === '10' ? 'selected' : ''}>State 10 - Bihar</option>
+                  <option value="11" ${state.settings.gstStateCode === '11' ? 'selected' : ''}>State 11 - Sikkim</option>
+                  <option value="12" ${state.settings.gstStateCode === '12' ? 'selected' : ''}>State 12 - Arunachal Pradesh</option>
+                  <option value="13" ${state.settings.gstStateCode === '13' ? 'selected' : ''}>State 13 - Nagaland</option>
+                  <option value="14" ${state.settings.gstStateCode === '14' ? 'selected' : ''}>State 14 - Manipur</option>
+                  <option value="15" ${state.settings.gstStateCode === '15' ? 'selected' : ''}>State 15 - Mizoram</option>
+                  <option value="16" ${state.settings.gstStateCode === '16' ? 'selected' : ''}>State 16 - Tripura</option>
+                  <option value="17" ${state.settings.gstStateCode === '17' ? 'selected' : ''}>State 17 - Meghalaya</option>
+                  <option value="18" ${state.settings.gstStateCode === '18' ? 'selected' : ''}>State 18 - Assam</option>
+                  <option value="19" ${state.settings.gstStateCode === '19' ? 'selected' : ''}>State 19 - West Bengal</option>
+                  <option value="20" ${state.settings.gstStateCode === '20' ? 'selected' : ''}>State 20 - Jharkhand</option>
+                  <option value="21" ${state.settings.gstStateCode === '21' ? 'selected' : ''}>State 21 - Odisha</option>
+                  <option value="22" ${state.settings.gstStateCode === '22' ? 'selected' : ''}>State 22 - Chhattisgarh</option>
+                  <option value="23" ${state.settings.gstStateCode === '23' ? 'selected' : ''}>State 23 - Madhya Pradesh</option>
                   <option value="24" ${state.settings.gstStateCode === '24' ? 'selected' : ''}>State 24 - Gujarat</option>
+                  <option value="25" ${state.settings.gstStateCode === '25' ? 'selected' : ''}>State 25 - Daman & Diu</option>
+                  <option value="26" ${state.settings.gstStateCode === '26' ? 'selected' : ''}>State 26 - Dadra & Nagar Haveli</option>
+                  <option value="27" ${state.settings.gstStateCode === '27' ? 'selected' : ''}>State 27 - Maharashtra</option>
+                  <option value="28" ${state.settings.gstStateCode === '28' ? 'selected' : ''}>State 28 - Andhra Pradesh (Old)</option>
+                  <option value="29" ${state.settings.gstStateCode === '29' ? 'selected' : ''}>State 29 - Karnataka</option>
+                  <option value="30" ${state.settings.gstStateCode === '30' ? 'selected' : ''}>State 30 - Goa</option>
+                  <option value="31" ${state.settings.gstStateCode === '31' ? 'selected' : ''}>State 31 - Lakshadweep</option>
+                  <option value="32" ${state.settings.gstStateCode === '32' ? 'selected' : ''}>State 32 - Kerala</option>
+                  <option value="33" ${state.settings.gstStateCode === '33' ? 'selected' : ''}>State 33 - Tamil Nadu</option>
+                  <option value="34" ${state.settings.gstStateCode === '34' ? 'selected' : ''}>State 34 - Puducherry</option>
+                  <option value="35" ${state.settings.gstStateCode === '35' ? 'selected' : ''}>State 35 - Andaman & Nicobar Islands</option>
+                  <option value="36" ${state.settings.gstStateCode === '36' ? 'selected' : ''}>State 36 - Telangana</option>
+                  <option value="37" ${state.settings.gstStateCode === '37' ? 'selected' : ''}>State 37 - Andhra Pradesh (New)</option>
+                  <option value="38" ${state.settings.gstStateCode === '38' ? 'selected' : ''}>State 38 - Ladakh</option>
+                  <option value="custom" ${['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38'].indexOf(state.settings.gstStateCode) === -1 ? 'selected' : ''}>Other / Custom State Code</option>
                 </select>
               </div>
             </div>
+
+            <!-- Custom State Code Input Section -->
+            <div id="custom-state-code-wrapper" style="display: ${['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38'].indexOf(state.settings.gstStateCode) === -1 ? 'block' : 'none'}; margin-bottom: 12px; transition: var(--transition-smooth);">
+              <div class="form-group">
+                <label for="set-custom-state">Enter Custom GST State Code *</label>
+                <input type="text" id="set-custom-state" class="form-control" value="${state.settings.gstStateCode || ''}" placeholder="e.g. 99" maxlength="2">
+                <p style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 4px;">Provide a 2-digit Indian GST State/UT numeric identifier code.</p>
+              </div>
+            </div>
+
             <div class="form-group" style="margin-bottom: 12px;">
               <label for="set-freq">Filing Frequency Loop</label>
               <select id="set-freq" style="width:100%;">
@@ -124,7 +170,7 @@ export function renderSettings(container) {
               <textarea id="set-terms" class="form-control" style="min-height: 80px; font-family: inherit; font-size: 0.85rem;" rows="3">${state.settings.termsAndConditions || ''}</textarea>
             </div>
 
-            <div id="settings-feedback" style="display: none; padding: 10px; border-radius: var(--border-radius-sm); font-size: 0.85rem; font-weight: 600; margin-bottom: 12px;"></div>
+            <div id="settings-feedback" style="display: ${settingsFeedbackMessage ? 'block' : 'none'}; padding: 10px; border-radius: var(--border-radius-sm); font-size: 0.85rem; font-weight: 600; margin-bottom: 12px; background: var(--debit-bg); color: var(--debit-color);">${settingsFeedbackMessage}</div>
 
             <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;"><i data-lucide="save"></i> Save Profile Settings</button>
           </form>
@@ -139,7 +185,7 @@ export function renderSettings(container) {
             Configure official corporate details, local GSTIN identification numbers, and default bank account wiring to print on outbound invoice quotes.
           </p>
           <div style="padding: 15px; background: rgba(255,255,255,0.01); border: 1px dashed var(--border-glass); border-radius: var(--border-radius-sm); font-size: 0.8rem; color: var(--text-secondary);">
-            Verify and match place of supply GST rates: Maharashtra (27), Karnataka (29), Delhi NCR (07), Gujarat (24).
+            Verify and match place of supply GST rates across all Indian states and union territories.
           </div>
         </div>
       </div>
@@ -147,10 +193,33 @@ export function renderSettings(container) {
 
     const form = container.querySelector('#profile-settings-form');
     const feedback = container.querySelector('#settings-feedback');
+    const selectState = container.querySelector('#set-state');
+    const customWrapper = container.querySelector('#custom-state-code-wrapper');
+    const inputCustomState = container.querySelector('#set-custom-state');
+
+    if (selectState && customWrapper && inputCustomState) {
+      selectState.addEventListener('change', (e) => {
+        if (e.target.value === 'custom') {
+          customWrapper.style.display = 'block';
+          inputCustomState.required = true;
+        } else {
+          customWrapper.style.display = 'none';
+          inputCustomState.required = false;
+        }
+      });
+    }
 
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       feedback.style.display = 'none';
+
+      const finalStateCode = selectState.value === 'custom' ? inputCustomState.value.trim() : selectState.value;
+      if (selectState.value === 'custom' && (!finalStateCode || finalStateCode.length !== 2 || isNaN(finalStateCode))) {
+        alert('Please enter a valid 2-digit numeric GST state code.');
+        return;
+      }
+
+      settingsFeedbackMessage = 'Settings updated and saved successfully!';
 
       dbState.updateSettings({
         companyName: container.querySelector('#set-company').value,
@@ -159,7 +228,7 @@ export function renderSettings(container) {
         companyEmail: container.querySelector('#set-email').value,
         companyGstin: container.querySelector('#set-gstin').value,
         gstin: container.querySelector('#set-gstin').value,
-        gstStateCode: container.querySelector('#set-state').value,
+        gstStateCode: finalStateCode,
         filingFrequency: container.querySelector('#set-freq').value,
         bankName: container.querySelector('#set-bank-name').value,
         bankAccName: container.querySelector('#set-bank-acc-name').value,
@@ -169,14 +238,11 @@ export function renderSettings(container) {
         termsAndConditions: container.querySelector('#set-terms').value
       });
 
-      feedback.style.background = 'var(--debit-bg)';
-      feedback.style.color = 'var(--debit-color)';
-      feedback.textContent = 'Settings updated and saved successfully!';
-      feedback.style.display = 'block';
-
       setTimeout(() => {
-        feedback.style.display = 'none';
-      }, 2000);
+        settingsFeedbackMessage = '';
+        const feedbackEl = container.querySelector('#settings-feedback');
+        if (feedbackEl) feedbackEl.style.display = 'none';
+      }, 3000);
     });
 
   } else {

@@ -221,6 +221,15 @@ class GlassERPState {
         if (!this.state.gstTransactions) this.state.gstTransactions = [];
         if (!this.state.expenses) this.state.expenses = [];
         if (!this.state.income) this.state.income = [];
+        if (!this.state.projectTasks || this.state.projectTasks.length === 0) {
+          this.state.projectTasks = [
+            { id: 'TSK-101', project_id: 'PRJ-101', name: 'Order 12mm Toughened Glass', description: 'Procure raw materials from Saint-Gobain', status: 'To Do' },
+            { id: 'TSK-102', project_id: 'PRJ-101', name: 'Site Survey & Measurements', description: 'Finalize site measurements and clearance', status: 'In Progress' },
+            { id: 'TSK-103', project_id: 'PRJ-101', name: 'Aluminum Framing Alignment', description: 'Assemble framing brackets at floor 3', status: 'Review' },
+            { id: 'TSK-104', project_id: 'PRJ-101', name: 'Initial Design Approval', description: 'Client sign-off on shop drawings', status: 'Done' },
+            { id: 'TSK-105', project_id: 'PRJ-102', name: 'Foundation Anchorage Check', description: 'Verify concrete load capacity', status: 'To Do' }
+          ];
+        }
       } catch (e) {
         console.error('Failed to parse saved state, seeding new data.', e);
         this.seedInitialData();
@@ -318,6 +327,13 @@ class GlassERPState {
       vendors: [
         { id: 'VND-001', name: 'Saint-Gobain Glass India', contact: 'Sales Desk', email: 'order@saint-gobain.co.in', phone: '7654321098', outstanding: 50000 },
         { id: 'VND-002', name: 'Hindalco Extrusions', contact: 'K. J. Nair', email: 'kjnair@hindalco.adityabirla.com', phone: '6543210987', outstanding: 0 }
+      ],
+      projectTasks: [
+        { id: 'TSK-101', project_id: 'PRJ-101', name: 'Order 12mm Toughened Glass', description: 'Procure raw materials from Saint-Gobain', status: 'To Do' },
+        { id: 'TSK-102', project_id: 'PRJ-101', name: 'Site Survey & Measurements', description: 'Finalize site measurements and clearance', status: 'In Progress' },
+        { id: 'TSK-103', project_id: 'PRJ-101', name: 'Aluminum Framing Alignment', description: 'Assemble framing brackets at floor 3', status: 'Review' },
+        { id: 'TSK-104', project_id: 'PRJ-101', name: 'Initial Design Approval', description: 'Client sign-off on shop drawings', status: 'Done' },
+        { id: 'TSK-105', project_id: 'PRJ-102', name: 'Foundation Anchorage Check', description: 'Verify concrete load capacity', status: 'To Do' }
       ]
     };
     // Calculate initial balances/costs/gst from the initial ledger entries or populate them
@@ -1114,6 +1130,9 @@ class GlassERPState {
       const preState = clone(this.state);
       this.state.projects = this.state.projects.filter(p => !ids.includes(p.project_id));
       this.state.projectCosts = this.state.projectCosts.filter(c => !ids.includes(c.project_id));
+      if (this.state.projectTasks) {
+        this.state.projectTasks = this.state.projectTasks.filter(t => !ids.includes(t.project_id));
+      }
       this.logAudit('DELETE_PROJECTS', 'projects', preState, this.state);
     });
   }
@@ -1130,6 +1149,42 @@ class GlassERPState {
       this.logAudit('UPDATE_PROJECT_STATUS', `projects/${projectId}`, preState, this.state);
       return proj;
     });
+  }
+
+  // PROJECT TASK OPERATIONS
+  createProjectTask(payload) {
+    const preState = clone(this.state);
+    const newTask = {
+      id: payload.id || `TSK-${100 + (this.state.projectTasks ? this.state.projectTasks.length : 0) + 1}`,
+      project_id: payload.project_id,
+      name: payload.name,
+      description: payload.description || '',
+      status: payload.status || 'To Do'
+    };
+    if (!this.state.projectTasks) this.state.projectTasks = [];
+    this.state.projectTasks.push(newTask);
+    this.logAudit('CREATE_PROJECT_TASK', `projects/${payload.project_id}/tasks`, preState, this.state);
+    this.saveState();
+    return newTask;
+  }
+
+  updateProjectTaskStatus(taskId, newStatus) {
+    const preState = clone(this.state);
+    if (!this.state.projectTasks) this.state.projectTasks = [];
+    const task = this.state.projectTasks.find(t => t.id === taskId);
+    if (!task) throw new Error(`Task with ID ${taskId} not found.`);
+    task.status = newStatus;
+    this.logAudit('UPDATE_PROJECT_TASK_STATUS', `projectTasks/${taskId}`, preState, this.state);
+    this.saveState();
+    return task;
+  }
+
+  deleteProjectTask(taskId) {
+    const preState = clone(this.state);
+    if (!this.state.projectTasks) this.state.projectTasks = [];
+    this.state.projectTasks = this.state.projectTasks.filter(t => t.id !== taskId);
+    this.logAudit('DELETE_PROJECT_TASK', `projectTasks/${taskId}`, preState, this.state);
+    this.saveState();
   }
 
   // DELETE CUSTOMERS
