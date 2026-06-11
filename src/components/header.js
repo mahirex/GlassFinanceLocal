@@ -16,6 +16,24 @@ export function renderHeader(container, currentViewName) {
   // Determine current active theme
   const isDark = document.body.classList.contains('dark-theme');
 
+  // Database Connection Bulb Status
+  const getStatusColor = (status) => {
+    if (status === 'online') return '#10b981'; // green
+    if (status === 'offline') return '#ef4444'; // red
+    return '#6b7280'; // gray (disconnected)
+  };
+
+  const getStatusLabel = (status) => {
+    if (status === 'online') return 'Online';
+    if (status === 'offline') return 'Offline / Error';
+    return 'Not Configured';
+  };
+
+  const sStatus = dbState.dbStatus.supabase;
+  const tStatus = dbState.dbStatus.turso;
+  const sColor = getStatusColor(sStatus);
+  const tColor = getStatusColor(tStatus);
+
   container.innerHTML = `
     <div class="header-title">
       <h2>${currentViewName}</h2>
@@ -27,6 +45,19 @@ export function renderHeader(container, currentViewName) {
       <div class="liquidity-badge">
         <i data-lucide="landmark"></i>
         <span>Liquidity: ${formatter.format(totalLiquidity)}</span>
+      </div>
+
+      <!-- Database Sync Status -->
+      <div class="db-sync-status" style="display: flex; align-items: center; gap: 10px; padding: 6px 12px; background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: 20px; font-size: 0.75rem; cursor: default;" title="Database Cloud Sync Indicators">
+        <div style="display: flex; align-items: center; gap: 6px;" title="Supabase DB: ${getStatusLabel(sStatus)}">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background-color: ${sColor}; box-shadow: 0 0 8px ${sColor}; display: inline-block; transition: all 0.3s ease;"></span>
+          <span style="color: var(--text-secondary); font-weight: 500;">Supa</span>
+        </div>
+        <div style="width: 1px; height: 12px; background-color: var(--border-glass);"></div>
+        <div style="display: flex; align-items: center; gap: 6px;" title="Turso DB: ${getStatusLabel(tStatus)}">
+          <span style="width: 8px; height: 8px; border-radius: 50%; background-color: ${tColor}; box-shadow: 0 0 8px ${tColor}; display: inline-block; transition: all 0.3s ease;"></span>
+          <span style="color: var(--text-secondary); font-weight: 500;">Turso</span>
+        </div>
       </div>
 
       <!-- Theme Switcher Button -->

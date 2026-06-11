@@ -17,7 +17,24 @@ The project is deployed on **Vercel** and connected via GitHub:
 - **Banking:** Integrated local banking management.
 - **Projects:** Track project budgets and allocations.
 - **Reports:** Generate and export financial statements.
-- **Supabase Cloud Sync:** Robust remote database synchronization.
+- **Hybrid Cloud Sync:** Bidirectional, self-healing state synchronization across **Supabase** and **Turso** databases.
+- **Realtime DB Bulb Indicators:** Interactive live connection health check indicators for both databases.
+
+---
+
+## 🗄️ Hybrid Database Configuration
+
+The application utilizes a hybrid database sync mechanism. To configure your local development environment, add the following variables to your [`.env.local`](file:///d:/code%201/new%20finance%20hr%20localag/.env.local) file:
+
+```env
+# Supabase Configuration
+VITE_SUPABASE_URL=https://your-supabase-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+
+# Turso (libSQL) Configuration
+VITE_TURSO_URL=libsql://your-turso-database.turso.io
+VITE_TURSO_AUTH_TOKEN=your-turso-auth-token
+```
 
 ---
 

@@ -2,6 +2,7 @@
 
 import { initialBankAccounts, initialEmployees, initialProjects, initialLedgerEntries, initialSettings } from './mockData.js';
 import { supabase } from './supabase.js';
+import { turso } from './turso.js';
 
 // Deep clone helper
 function clone(obj) {
@@ -25,40 +26,148 @@ export function uuid() {
 class GlassERPState {
   constructor() {
     this.listeners = [];
+    this.dbStatus = {
+      supabase: supabase ? 'offline' : 'disconnected',
+      turso: turso ? 'offline' : 'disconnected'
+    };
     this.loadState();
   }
 
   async init() {
-    if (!supabase) {
-      this.loadState();
-      return;
+    let supabaseData = null;
+    let tursoData = null;
+
+    // Load from Supabase if configured
+    if (supabase) {
+      try {
+        supabaseData = await this.loadStateFromSupabaseData();
+      } catch (err) {
+        console.error('Error loading from Supabase:', err);
+      }
     }
-    await this.loadStateFromSupabase();
+
+    // Load from Turso if configured
+    if (turso) {
+      try {
+        tursoData = await this.loadStateFromTurso();
+      } catch (err) {
+        console.error('Error loading from Turso:', err);
+      }
+    }
+
+    // Choose the latest state based on updated_at
+    let chosenState = null;
+
+    if (supabaseData && supabaseData.state && tursoData && tursoData.state) {
+      const sTime = new Date(supabaseData.updated_at || 0).getTime();
+      const tTime = new Date(tursoData.updated_at || 0).getTime();
+
+      if (sTime >= tTime) {
+        chosenState = supabaseData.state;
+        this.state = chosenState;
+        // Sync Turso up to date with Supabase
+        this.saveStateToTurso().catch(console.error);
+      } else {
+        chosenState = tursoData.state;
+        this.state = chosenState;
+        // Sync Supabase up to date with Turso
+        this.saveStateToSupabase().catch(console.error);
+      }
+    } else if (supabaseData && supabaseData.state) {
+      chosenState = supabaseData.state;
+      this.state = chosenState;
+      // Sync Turso if it's online but empty
+      if (this.dbStatus.turso === 'online') {
+        this.saveStateToTurso().catch(console.error);
+      }
+    } else if (tursoData && tursoData.state) {
+      chosenState = tursoData.state;
+      this.state = chosenState;
+      // Sync Supabase if it's online but empty
+      if (this.dbStatus.supabase === 'online') {
+        this.saveStateToSupabase().catch(console.error);
+      }
+    }
+
+    if (chosenState) {
+      this.pruneExistingAuditLogs();
+    } else {
+      console.log('No cloud state found or databases offline, loading local state');
+      this.loadState();
+
+      // Seed databases if they are online but empty
+      if (this.dbStatus.supabase === 'online' && (!supabaseData || !supabaseData.state)) {
+        this.saveStateToSupabase().catch(console.error);
+      }
+      if (this.dbStatus.turso === 'online' && (!tursoData || !tursoData.state)) {
+        this.saveStateToTurso().catch(console.error);
+      }
+    }
+
+    this.notify();
   }
 
-  async loadStateFromSupabase() {
+  async loadStateFromSupabaseData() {
+    if (!supabase) {
+      this.dbStatus.supabase = 'disconnected';
+      return null;
+    }
     try {
       const { data, error } = await supabase
         .from('glasserp_state')
-        .select('state')
+        .select('state, updated_at')
         .eq('id', 1)
-        .single();
+        .maybeSingle();
 
       if (error) {
-        if (error.code === 'PGRST116') {
-          console.log('No state found in Supabase. Seeding database state...');
-          this.seedInitialData();
-          await this.saveStateToSupabase();
-        } else {
-          throw error;
-        }
-      } else if (data && data.state) {
-        this.state = data.state;
-        this.pruneExistingAuditLogs();
+        this.dbStatus.supabase = 'offline';
+        throw error;
       }
+      this.dbStatus.supabase = 'online';
+      if (data) {
+        return { state: data.state, updated_at: data.updated_at };
+      }
+      return { state: null, updated_at: null };
     } catch (e) {
-      console.error('Failed to load state from Supabase, falling back to local storage:', e);
-      this.loadState();
+      console.error('Failed to load from Supabase:', e);
+      this.dbStatus.supabase = 'offline';
+      return null;
+    }
+  }
+
+  async loadStateFromTurso() {
+    if (!turso) {
+      this.dbStatus.turso = 'disconnected';
+      return null;
+    }
+    try {
+      const result = await turso.execute({
+        sql: "SELECT state, updated_at FROM glasserp_state WHERE id = 1",
+        args: []
+      });
+      this.dbStatus.turso = 'online';
+      if (result.rows && result.rows.length > 0) {
+        const row = result.rows[0];
+        const stateObj = typeof row.state === 'string' ? JSON.parse(row.state) : row.state;
+        return { state: stateObj, updated_at: row.updated_at };
+      }
+      return { state: null, updated_at: null };
+    } catch (e) {
+      console.error('Failed to load from Turso:', e);
+      const errorMsg = e.message || '';
+      if (errorMsg.includes('no such table') || errorMsg.includes('does not exist')) {
+        this.dbStatus.turso = 'online';
+        try {
+          await turso.execute("CREATE TABLE IF NOT EXISTS glasserp_state (id INTEGER PRIMARY KEY, state TEXT, updated_at TEXT)");
+          console.log('Seeded Turso table glasserp_state.');
+        } catch (schemaErr) {
+          console.error('Failed to create Turso table:', schemaErr);
+        }
+        return { state: null, updated_at: null };
+      } else {
+        this.dbStatus.turso = 'offline';
+        return null;
+      }
     }
   }
 
@@ -69,7 +178,28 @@ class GlassERPState {
       .upsert({ id: 1, state: this.state, updated_at: new Date().toISOString() });
     
     if (error) {
+      this.dbStatus.supabase = 'offline';
       throw error;
+    }
+    this.dbStatus.supabase = 'online';
+  }
+
+  async saveStateToTurso() {
+    if (!turso) return;
+    try {
+      const stateStr = JSON.stringify(this.state);
+      const now = new Date().toISOString();
+      await turso.execute({
+        sql: `INSERT INTO glasserp_state (id, state, updated_at) 
+              VALUES (1, ?, ?) 
+              ON CONFLICT(id) DO UPDATE SET state = excluded.state, updated_at = excluded.updated_at`,
+        args: [stateStr, now]
+      });
+      this.dbStatus.turso = 'online';
+    } catch (e) {
+      console.error('Failed to save state to Turso:', e);
+      this.dbStatus.turso = 'offline';
+      throw e;
     }
   }
 
@@ -347,9 +477,31 @@ class GlassERPState {
     }
     this.notify();
 
+    const promises = [];
     if (supabase) {
-      this.saveStateToSupabase().catch(err => {
-        console.error('Failed to sync state to Supabase:', err);
+      promises.push(
+        this.saveStateToSupabase()
+          .then(() => { this.dbStatus.supabase = 'online'; })
+          .catch(err => {
+            console.error('Failed to sync state to Supabase:', err);
+            this.dbStatus.supabase = 'offline';
+          })
+      );
+    }
+    if (turso) {
+      promises.push(
+        this.saveStateToTurso()
+          .then(() => { this.dbStatus.turso = 'online'; })
+          .catch(err => {
+            console.error('Failed to sync state to Turso:', err);
+            this.dbStatus.turso = 'offline';
+          })
+      );
+    }
+
+    if (promises.length > 0) {
+      Promise.all(promises).finally(() => {
+        this.notify();
       });
     }
   }
