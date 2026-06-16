@@ -10,6 +10,8 @@ export function renderHR(container, viewName) {
     renderAttendanceRoster(container);
   } else if (viewName === 'employee-advances') {
     renderEmployeeAdvancesBoard(container);
+  } else if (viewName === 'petrol') {
+    renderPetrolAdvancesBoard(container);
   }
 }
 
@@ -972,3 +974,325 @@ function renderEmployeeAdvancesBoard(container) {
     window.lucide.createIcons();
   }
 }
+
+export function renderPetrolAdvancesBoard(container) {
+  const state = dbState.state;
+  const petrolRate = state.petrolRate !== undefined ? state.petrolRate : 120;
+
+  container.innerHTML = `
+    <div style="display: flex; flex-direction: column; gap: 25px;">
+      
+      <!-- Top Action bar with Petrol Rate configurator -->
+      <div class="glass-panel" style="padding: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+        <div>
+          <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin: 0;">Employee Petrol Advances Dashboard</h3>
+          <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">Track mileage, petrol consumption, and advance payments</p>
+        </div>
+        <div class="form-group" style="display: flex; flex-direction: row; align-items: center; gap: 10px; margin: 0;">
+          <label for="petrol-rate-top" style="white-space: nowrap; font-weight: 600; color: var(--text-primary);">Petrol Rate (₹/Litre):</label>
+          <input type="number" id="petrol-rate-top" class="form-control" value="${petrolRate}" style="width: 100px; padding: 6px 12px; font-size: 0.9rem; font-weight: 700; text-align: center;">
+          <button class="btn btn-primary" id="btn-save-rate" style="padding: 6px 12px; font-size: 0.85rem;">Update Rate</button>
+        </div>
+      </div>
+
+      <!-- Main Layout Split -->
+      <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 30px; align-items: start; flex-wrap: wrap;">
+        
+        <!-- Left Panel: Employee Registry -->
+        <div class="glass-panel" style="padding: 20px;">
+          <h4 style="font-size: 1rem; font-weight: 700; color: var(--text-primary); margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+            <i data-lucide="users" style="color: var(--accent-color); width: 18px; height: 18px;"></i>
+            Staff Registry
+          </h4>
+          <div id="petrol-employees-table-mount"></div>
+        </div>
+
+        <!-- Right Panel: Petrol Advance details for Selected Employee -->
+        <div class="glass-panel" id="petrol-detail-mount" style="min-height: 500px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); padding: 24px;">
+          <div style="text-align: center;">
+            <i data-lucide="fuel" style="width: 48px; height: 48px; opacity: 0.5; margin-bottom: 10px; color: var(--accent-color);"></i>
+            <p>Select an employee from the registry to view and manage their daily petrol advances.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  `;
+
+  // Bind Petrol Rate Update
+  const petrolRateInput = container.querySelector('#petrol-rate-top');
+  container.querySelector('#btn-save-rate').addEventListener('click', () => {
+    const rateVal = parseFloat(petrolRateInput.value) || 120;
+    dbState.updatePetrolRate(rateVal);
+    // Flash visual check
+    const btn = container.querySelector('#btn-save-rate');
+    btn.innerHTML = `<i data-lucide="check" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: middle;"></i> Updated`;
+    btn.style.background = 'var(--debit-bg)';
+    btn.style.color = 'var(--debit-color)';
+    if (window.lucide) window.lucide.createIcons();
+    setTimeout(() => {
+      btn.textContent = 'Update Rate';
+      btn.style.background = '';
+      btn.style.color = '';
+    }, 1200);
+  });
+
+  // Render Left Column Table
+  const headers = [
+    { key: 'name', label: 'Employee Name' },
+    { key: 'designation', label: 'Designation' }
+  ];
+
+  new GlassTable({
+    container: container.querySelector('#petrol-employees-table-mount'),
+    headers: headers,
+    data: state.employees,
+    onRowClick: (row) => {
+      renderEmployeePetrolWorkspace(container.querySelector('#petrol-detail-mount'), row);
+    }
+  });
+
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
+}
+
+function renderEmployeePetrolWorkspace(mount, employee) {
+  const state = dbState.state;
+  const currentRate = state.petrolRate || 120;
+  
+  // Filter logs for this employee
+  const employeeLogs = (state.petrolLogs || []).filter(log => log.employee_id === employee.employee_id);
+  
+  // Calculate summary statistics
+  const totalKm = employeeLogs.reduce((acc, log) => acc + (log.total_km || 0), 0);
+  const totalLitres = employeeLogs.reduce((acc, log) => acc + (log.litres_used || 0), 0);
+  const totalPaid = employeeLogs.reduce((acc, log) => acc + (log.amount_paid || 0), 0);
+
+  // Get last end meter reading as default start meter
+  let defaultStartMeter = 0;
+  if (employeeLogs.length > 0) {
+    defaultStartMeter = Math.max(...employeeLogs.map(l => l.end_meter || 0), 0);
+  }
+
+  mount.style.display = 'block';
+  mount.innerHTML = `
+    <div style="width: 100%;">
+      <!-- Workspace Header -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--border-glass); padding-bottom: 15px; flex-wrap: wrap; gap: 15px;">
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <div style="width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, #06b6d4, #3b82f6); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 700; color: #fff;">
+            ${employee.name.split(' ').map(n => n[0]).join('')}
+          </div>
+          <div>
+            <h3 style="font-family: var(--font-heading); font-size: 1.15rem; font-weight: 700; color: var(--text-primary); margin: 0;">${employee.name}</h3>
+            <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0;">${employee.designation} | ID: ${employee.employee_id}</p>
+          </div>
+        </div>
+
+        <!-- Summary Cards inline -->
+        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+          <div class="glass-panel" style="padding: 8px 14px; text-align: center; min-width: 90px; background: rgba(255, 255, 255, 0.01);">
+            <div style="font-size: 0.65rem; text-transform: uppercase; color: var(--text-muted);">Total KM</div>
+            <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary);">${totalKm} km</div>
+          </div>
+          <div class="glass-panel" style="padding: 8px 14px; text-align: center; min-width: 90px; background: rgba(255, 255, 255, 0.01);">
+            <div style="font-size: 0.65rem; text-transform: uppercase; color: var(--text-muted);">Total Litres</div>
+            <div style="font-size: 0.95rem; font-weight: 700; color: var(--text-primary);">${round(totalLitres)} L</div>
+          </div>
+          <div class="glass-panel" style="padding: 8px 14px; text-align: center; min-width: 90px; background: rgba(255, 255, 255, 0.01);">
+            <div style="font-size: 0.65rem; text-transform: uppercase; color: var(--text-muted);">Amount Paid</div>
+            <div style="font-size: 0.95rem; font-weight: 700; color: var(--debit-color);">${inrFormat.format(totalPaid)}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Left-Right Form vs Log Table Split -->
+      <div style="display: grid; grid-template-columns: 1.2fr 2fr; gap: 20px; align-items: start; flex-wrap: wrap;">
+        
+        <!-- Form: Daily Petrol Log -->
+        <div class="glass-panel" style="padding: 15px; background: rgba(255,255,255,0.01);">
+          <h5 style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; border-bottom: 1px dashed var(--border-glass); padding-bottom: 6px;">New Petrol Advance Entry</h5>
+          <form id="petrol-entry-form" style="display: flex; flex-direction: column; gap: 10px;">
+            <div class="form-group">
+              <label for="petrol-date" style="font-size: 0.75rem;">Date</label>
+              <input type="date" id="petrol-date" class="form-control" value="${new Date().toISOString().split('T')[0]}" required style="font-size: 0.8rem; padding: 5px 10px;">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div class="form-group">
+                <label for="petrol-start-meter" style="font-size: 0.75rem;">Start Meter (KM)</label>
+                <input type="number" id="petrol-start-meter" class="form-control" value="${defaultStartMeter}" required style="font-size: 0.8rem; padding: 5px 10px;">
+              </div>
+              <div class="form-group">
+                <label for="petrol-end-meter" style="font-size: 0.75rem;">End Meter (KM)</label>
+                <input type="number" id="petrol-end-meter" class="form-control" placeholder="e.g. ${defaultStartMeter + 50}" required style="font-size: 0.8rem; padding: 5px 10px;">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label style="font-size: 0.75rem;">Total KM (Calculated)</label>
+              <div id="petrol-total-km-display" style="padding: 6px 12px; background: rgba(255,255,255,0.03); border-radius: 6px; font-weight: 700; font-size: 0.85rem; border: 1px solid var(--border-glass);">${defaultStartMeter} km</div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div class="form-group">
+                <label for="petrol-litres" style="font-size: 0.75rem;">Litres Used</label>
+                <input type="number" step="0.01" id="petrol-litres" class="form-control" placeholder="0.00" style="font-size: 0.8rem; padding: 5px 10px;">
+              </div>
+              <div class="form-group">
+                <label for="petrol-amount" style="font-size: 0.75rem;">Amount Paid (₹)</label>
+                <input type="number" id="petrol-amount" class="form-control" placeholder="0.00" style="font-size: 0.8rem; padding: 5px 10px;">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="petrol-remarks" style="font-size: 0.75rem;">Remarks / Notes</label>
+              <input type="text" id="petrol-remarks" class="form-control" placeholder="e.g. Visit to Apex site" style="font-size: 0.8rem; padding: 5px 10px;">
+            </div>
+
+            <!-- Double-entry checkbox -->
+            <div style="display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 0.75rem;">
+              <input type="checkbox" id="post-to-ledger-chk" checked style="width: 14px; height: 14px; cursor: pointer;">
+              <label for="post-to-ledger-chk" style="cursor: pointer; margin: 0; color: var(--text-secondary);">Post to double-entry ledger</label>
+            </div>
+
+            <!-- Ledger posting bank selector -->
+            <div id="ledger-bank-selector" style="display: flex; flex-direction: column; gap: 4px; font-size: 0.75rem;">
+              <label for="petrol-bank-source">Paid From:</label>
+              <select id="petrol-bank-source" style="padding: 4px 8px; font-size: 0.75rem; background: var(--bg-card); color: var(--text-primary); border: 1px solid var(--border-glass); border-radius: 4px;">
+                ${state.bankAccounts.map(b => `<option value="${b.bank_id}" ${b.bank_id === 'bank-cash-hand' ? 'selected' : ''}>${b.account_name} (Bal: ₹${b.current_balance})</option>`).join('')}
+              </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="margin-top: 5px; font-size: 0.8rem; padding: 6px 12px;">Save Daily Entry</button>
+          </form>
+        </div>
+
+        <!-- Table: Historical logs -->
+        <div>
+          <h5 style="font-size: 0.9rem; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+            <i data-lucide="history" style="width: 14px; height: 14px; color: var(--accent-color);"></i> Log Registry History
+          </h5>
+          <div id="petrol-logs-table-mount"></div>
+        </div>
+
+      </div>
+    </div>
+  `;
+
+  // Grab form inputs
+  const form = mount.querySelector('#petrol-entry-form');
+  const dateInput = mount.querySelector('#petrol-date');
+  const startInput = mount.querySelector('#petrol-start-meter');
+  const endInput = mount.querySelector('#petrol-end-meter');
+  const kmDisplay = mount.querySelector('#petrol-total-km-display');
+  const litresInput = mount.querySelector('#petrol-litres');
+  const amountInput = mount.querySelector('#petrol-amount');
+  const remarksInput = mount.querySelector('#petrol-remarks');
+  const postLedgerChk = mount.querySelector('#post-to-ledger-chk');
+  const bankSelector = mount.querySelector('#ledger-bank-selector');
+
+  // Handle bank selector visibility toggle
+  postLedgerChk.addEventListener('change', () => {
+    bankSelector.style.display = postLedgerChk.checked ? 'flex' : 'none';
+  });
+
+  // Calculate KM on input change
+  function updateKm() {
+    const start = parseFloat(startInput.value) || 0;
+    const end = parseFloat(endInput.value) || 0;
+    const diff = Math.max(0, end - start);
+    kmDisplay.textContent = `${diff} km`;
+  }
+  startInput.addEventListener('input', updateKm);
+  endInput.addEventListener('input', updateKm);
+  updateKm();
+
+  // Auto-calculation logic between Litres and Amount
+  litresInput.addEventListener('input', () => {
+    const l = parseFloat(litresInput.value) || 0;
+    amountInput.value = round(l * currentRate);
+  });
+  amountInput.addEventListener('input', () => {
+    const amt = parseFloat(amountInput.value) || 0;
+    litresInput.value = round(amt / currentRate);
+  });
+
+  // Form submit handler
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        employee_id: employee.employee_id,
+        date: dateInput.value,
+        start_meter: parseFloat(startInput.value) || 0,
+        end_meter: parseFloat(endInput.value) || 0,
+        litres_used: parseFloat(litresInput.value) || 0,
+        petrol_rate: currentRate,
+        amount_paid: parseFloat(amountInput.value) || 0,
+        remarks: remarksInput.value
+      };
+
+      if (payload.end_meter < payload.start_meter) {
+        throw new Error("End meter reading cannot be less than start meter reading.");
+      }
+      if (payload.amount_paid <= 0) {
+        throw new Error("Amount paid must be greater than zero.");
+      }
+
+      // If posting to double-entry ledger is checked
+      if (postLedgerChk.checked) {
+        const bankId = mount.querySelector('#petrol-bank-source').value;
+        const refNo = `PETROL-${Date.now().toString().slice(-6)}`;
+        
+        // Post expense
+        dbState.makePayment({
+          date: payload.date,
+          amount: payload.amount_paid,
+          paymentType: 'Employee Advance', // debit employee advance account so it behaves like other advances
+          bankId: bankId,
+          referenceNo: refNo,
+          description: `Petrol Advance Log: Start:${payload.start_meter} End:${payload.end_meter} (${payload.remarks || 'No notes'})`,
+          employeeLink: employee.employee_id,
+          gstApplicable: false,
+          gstRate: '0'
+        });
+      }
+
+      // Save petrol log
+      dbState.createPetrolLog(payload);
+
+      // Re-render
+      renderEmployeePetrolWorkspace(mount, employee);
+    } catch (err) {
+      alert(err.message);
+    }
+  });
+
+  // Render Log Table
+  const logHeaders = [
+    { key: 'date', label: 'Date' },
+    { key: 'start_meter', label: 'Start' },
+    { key: 'end_meter', label: 'End' },
+    { key: 'total_km', label: 'KM' },
+    { key: 'litres_used', label: 'Litres' },
+    { key: 'amount_paid', label: 'Paid (₹)', render: val => inrFormat.format(val) },
+    { key: 'remarks', label: 'Remarks' }
+  ];
+
+  new GlassTable({
+    container: mount.querySelector('#petrol-logs-table-mount'),
+    headers: logHeaders,
+    data: employeeLogs,
+    onDeleteSelected: (selectedRows) => {
+      selectedRows.forEach(row => dbState.deletePetrolLog(row.id));
+      renderEmployeePetrolWorkspace(mount, employee);
+    }
+  });
+
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
+}
+

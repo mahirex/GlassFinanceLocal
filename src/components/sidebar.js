@@ -38,7 +38,8 @@ export function renderSidebar(container, activeRoute, onNavigate) {
       items: [
         { route: 'employees', label: 'Employees', icon: 'contact' },
         { route: 'attendance', label: 'Attendance', icon: 'calendar-days' },
-        { route: 'employee-advances', label: 'Employee Advances', icon: 'coins' }
+        { route: 'employee-advances', label: 'Employee Advances', icon: 'coins' },
+        { route: 'petrol', label: 'Petrol Advances', icon: 'fuel' }
       ]
     },
     {

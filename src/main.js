@@ -45,6 +45,7 @@ const routeDisplayNames = {
   'employees': 'Staff Master Directory',
   'attendance': 'Daily Attendance Overtime Matrix',
   'employee-advances': 'Employee Salary Advances Board',
+  'petrol': 'Employee Petrol Advances Board',
   'settings': 'Corporate & Accounting Settings',
   'audit-log': 'Immutable System Audit trails'
 };
@@ -170,6 +171,7 @@ function mountActiveView(container) {
     case 'employees':
     case 'attendance':
     case 'employee-advances':
+    case 'petrol':
       renderHR(container, currentRoute);
       break;
     case 'settings':

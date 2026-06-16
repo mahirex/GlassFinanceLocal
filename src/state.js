@@ -91,6 +91,7 @@ class GlassERPState {
 
     if (chosenState) {
       this.pruneExistingAuditLogs();
+      this.ensureStateDefaults();
     } else {
       console.log('No cloud state found or databases offline, loading local state');
       this.loadState();
@@ -238,12 +239,32 @@ class GlassERPState {
     });
   }
 
+  ensureStateDefaults() {
+    if (!this.state) return;
+    if (!this.state.production) this.state.production = [];
+    if (!this.state.customers) this.state.customers = [];
+    if (!this.state.vendors) this.state.vendors = [];
+    if (!this.state.bankAccounts) this.state.bankAccounts = [];
+    if (!this.state.employees) this.state.employees = [];
+    if (!this.state.projects) this.state.projects = [];
+    if (!this.state.ledgerEntries) this.state.ledgerEntries = [];
+    if (!this.state.projectCosts) this.state.projectCosts = [];
+    if (!this.state.gstTransactions) this.state.gstTransactions = [];
+    if (!this.state.expenses) this.state.expenses = [];
+    if (!this.state.income) this.state.income = [];
+    if (!this.state.petrolLogs) this.state.petrolLogs = [];
+    if (this.state.petrolRate === undefined) this.state.petrolRate = 120;
+    if (!this.state.projectTasks) this.state.projectTasks = [];
+    if (!this.state.auditLogs) this.state.auditLogs = [];
+  }
+
   loadState() {
     const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('glasserp_state_v2') : null;
     if (saved) {
       try {
         this.state = JSON.parse(saved);
         this.pruneExistingAuditLogs();
+        this.ensureStateDefaults();
         // Defensive checks to ensure all collections exist
         if (!this.state.quotations || this.state.quotations.length === 0) {
           this.state.quotations = [
@@ -351,6 +372,8 @@ class GlassERPState {
         if (!this.state.gstTransactions) this.state.gstTransactions = [];
         if (!this.state.expenses) this.state.expenses = [];
         if (!this.state.income) this.state.income = [];
+        if (!this.state.petrolLogs) this.state.petrolLogs = [];
+        if (this.state.petrolRate === undefined) this.state.petrolRate = 120;
         if (!this.state.projectTasks || this.state.projectTasks.length === 0) {
           this.state.projectTasks = [
             { id: 'TSK-101', project_id: 'PRJ-101', name: 'Order 12mm Toughened Glass', description: 'Procure raw materials from Saint-Gobain', status: 'To Do' },
@@ -381,6 +404,8 @@ class GlassERPState {
       settings: clone(initialSettings),
       expenses: [],
       income: [],
+      petrolLogs: [],
+      petrolRate: 120,
       quotations: [
         {
           id: 'QTN-9021',
@@ -1446,6 +1471,41 @@ class GlassERPState {
 
       this.logAudit('DELETE_INCOME', 'income', preState, this.state);
     });
+  }
+
+  // PETROL LOG OPERATIONS
+  createPetrolLog(payload) {
+    const preState = clone(this.state);
+    const newLog = {
+      id: payload.id || uuid(),
+      employee_id: payload.employee_id,
+      date: payload.date || new Date().toISOString().split('T')[0],
+      start_meter: round(parseFloat(payload.start_meter) || 0),
+      end_meter: round(parseFloat(payload.end_meter) || 0),
+      total_km: round((parseFloat(payload.end_meter) || 0) - (parseFloat(payload.start_meter) || 0)),
+      litres_used: round(parseFloat(payload.litres_used) || 0),
+      petrol_rate: round(parseFloat(payload.petrol_rate) || this.state.petrolRate || 120),
+      amount_paid: round(parseFloat(payload.amount_paid) || 0),
+      remarks: payload.remarks || ''
+    };
+    this.state.petrolLogs.unshift(newLog);
+    this.logAudit('CREATE_PETROL_LOG', `employees/${payload.employee_id}/petrol`, preState, this.state);
+    this.saveState();
+    return newLog;
+  }
+
+  deletePetrolLog(id) {
+    const preState = clone(this.state);
+    this.state.petrolLogs = this.state.petrolLogs.filter(log => log.id !== id);
+    this.logAudit('DELETE_PETROL_LOG', `petrol/${id}`, preState, this.state);
+    this.saveState();
+  }
+
+  updatePetrolRate(rate) {
+    const preState = clone(this.state);
+    this.state.petrolRate = round(parseFloat(rate) || 120);
+    this.logAudit('UPDATE_PETROL_RATE', 'settings/petrol_rate', preState, this.state);
+    this.saveState();
   }
 }
 
