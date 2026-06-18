@@ -1075,7 +1075,8 @@ class GlassERPState {
     
     // PAN regex check
     const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
-    if (payload.pan && !panRegex.test(payload.pan.toUpperCase())) {
+    const cleanPan = payload.pan ? String(payload.pan).trim().toUpperCase() : '';
+    if (cleanPan && !panRegex.test(cleanPan)) {
       throw new Error('Invalid PAN Number format. Must match standard format (e.g. ABCDE1234F).');
     }
 
@@ -1086,7 +1087,7 @@ class GlassERPState {
       mobile: payload.mobile,
       address: payload.address,
       profile_image: payload.profile_image || '',
-      pan: payload.pan ? payload.pan.toUpperCase() : '',
+      pan: cleanPan,
       aadhaar_status: payload.aadhaar_status || 'Verified (Physical Check)',
       joining_date: payload.joining_date || new Date().toISOString().split('T')[0],
       designation: payload.designation,
@@ -1097,10 +1098,59 @@ class GlassERPState {
       overtime: {} // Date key -> hours
     };
 
+    // Copy any custom properties dynamically
+    Object.keys(payload).forEach(key => {
+      if (!(key in newEmployee)) {
+        newEmployee[key] = payload[key];
+      }
+    });
+
     this.state.employees.push(newEmployee);
     this.logAudit('CREATE_EMPLOYEE', 'employees', preState, this.state);
     this.saveState();
     return newEmployee;
+  }
+
+  createEmployees(payloads) {
+    const preState = clone(this.state);
+    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+
+    payloads.forEach(payload => {
+      let cleanPan = payload.pan ? String(payload.pan).trim().toUpperCase() : '';
+      if (cleanPan && !panRegex.test(cleanPan)) {
+        cleanPan = ''; // Set empty instead of throwing error during bulk imports
+      }
+
+      const newEmployee = {
+        employee_id: payload.employee_id || `EMP-${100 + this.state.employees.length + 1}`,
+        name: payload.name || 'Unknown Employee',
+        email: payload.email || '',
+        mobile: payload.mobile || '',
+        address: payload.address || '',
+        profile_image: payload.profile_image || '',
+        pan: cleanPan,
+        aadhaar_status: payload.aadhaar_status || 'Verified (Physical Check)',
+        joining_date: payload.joining_date || new Date().toISOString().split('T')[0],
+        designation: payload.designation || 'Staff',
+        salary_type: payload.salary_type || 'Monthly',
+        base_salary: round(parseFloat(payload.base_salary) || 0),
+        advance_due: 0,
+        attendance: {},
+        overtime: {}
+      };
+
+      // Copy custom properties dynamically
+      Object.keys(payload).forEach(key => {
+        if (!(key in newEmployee)) {
+          newEmployee[key] = payload[key];
+        }
+      });
+
+      this.state.employees.push(newEmployee);
+    });
+
+    this.logAudit('CREATE_EMPLOYEES_BATCH', 'employees', preState, this.state);
+    this.saveState();
   }
 
   recordAttendance(employeeId, date, status, overtimeHours = 0) {
@@ -1115,6 +1165,21 @@ class GlassERPState {
     emp.overtime[date] = round(parseFloat(overtimeHours) || 0);
 
     this.logAudit('RECORD_ATTENDANCE', `employees/${employeeId}`, preState, this.state);
+    this.saveState();
+  }
+
+  recordAttendanceBatch(updates, date) {
+    const preState = clone(this.state);
+    updates.forEach(upd => {
+      const emp = this.state.employees.find(e => e.employee_id === upd.employeeId);
+      if (emp) {
+        if (!emp.attendance) emp.attendance = {};
+        if (!emp.overtime) emp.overtime = {};
+        emp.attendance[date] = upd.status;
+        emp.overtime[date] = round(parseFloat(upd.overtimeHours) || 0);
+      }
+    });
+    this.logAudit('RECORD_ATTENDANCE_BATCH', 'employees', preState, this.state);
     this.saveState();
   }
 

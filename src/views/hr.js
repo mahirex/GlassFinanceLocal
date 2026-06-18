@@ -16,8 +16,21 @@ export function renderHR(container, viewName) {
 }
 
 // 1. COMPREHENSIVE EMPLOYEE DIRECTORY & PROFILE VIEW
+// 1. COMPREHENSIVE EMPLOYEE DIRECTORY & PROFILE VIEW
 function renderEmployeeDirectory(container) {
   const state = dbState.state;
+
+  // Initialize employee columns in settings if not present
+  if (!state.settings.employeeColumns) {
+    state.settings.employeeColumns = [
+      { key: 'name', label: 'Name' },
+      { key: 'employee_id', label: 'ID' },
+      { key: 'designation', label: 'Designation' }
+    ];
+  }
+
+  const headers = state.settings.employeeColumns;
+  const standardKeys = ['name', 'employee_id', 'designation', 'email', 'mobile', 'address', 'pan', 'aadhaar_status', 'joining_date', 'salary_type', 'base_salary'];
 
   container.innerHTML = `
     <div style="display: grid; grid-template-columns: 1.2fr 2fr; gap: 30px; align-items: start; flex-wrap: wrap;">
@@ -40,6 +53,7 @@ function renderEmployeeDirectory(container) {
               <i data-lucide="upload" style="width: 12px; height: 12px; margin-right: 4px;"></i> Import
               <input type="file" id="import-emp-csv" accept=".csv" style="display: none;">
             </label>
+            <button type="button" class="btn btn-secondary" id="btn-add-column" style="padding: 4px 10px; font-size: 0.75rem; flex: 1;"><i data-lucide="plus-circle" style="width: 12px; height: 12px; margin-right: 4px;"></i> Add Column</button>
           </div>
 
           <div id="employee-list-table-mount"></div>
@@ -56,13 +70,7 @@ function renderEmployeeDirectory(container) {
     </div>
   `;
 
-  // Draw list table instead of cards
-  const headers = [
-    { key: 'name', label: 'Name' },
-    { key: 'employee_id', label: 'ID' },
-    { key: 'designation', label: 'Designation' }
-  ];
-
+  // Draw list table with dynamic columns
   const table = new GlassTable({
     container: container.querySelector('#employee-list-table-mount'),
     headers: headers,
@@ -77,9 +85,55 @@ function renderEmployeeDirectory(container) {
     }
   });
 
+  // Add Dynamic Custom Column Listener
+  container.querySelector('#btn-add-column').addEventListener('click', () => {
+    const modalHtml = `
+      <div style="text-align: left;">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label for="new-col-label">Column Name *</label>
+          <input type="text" id="new-col-label" class="form-control" placeholder="e.g. Location, Department, Blood Group" required>
+        </div>
+      </div>
+    `;
+
+    showModal('Add Custom Column', modalHtml, (formEl) => {
+      const columnName = formEl.querySelector('#new-col-label').value;
+      if (columnName && columnName.trim()) {
+        const label = columnName.trim();
+        const key = label.toLowerCase().replace(/\s+/g, '_');
+        
+        // Prevent duplicates
+        if (state.settings.employeeColumns.some(col => col.key === key)) {
+          alert("A column with this name already exists.");
+          return false;
+        }
+        
+        state.settings.employeeColumns.push({ key: key, label: label });
+        dbState.updateSettings({ employeeColumns: state.settings.employeeColumns });
+        renderEmployeeDirectory(container);
+        return true;
+      }
+      return false;
+    });
+  });
+
   // Modal Onboard
   container.querySelector('#btn-add-employee').addEventListener('click', () => {
     const today = new Date().toISOString().split('T')[0];
+
+    // Build custom fields inputs dynamically
+    let customFieldsHtml = '';
+    headers.forEach(col => {
+      if (!standardKeys.includes(col.key)) {
+        customFieldsHtml += `
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label for="emp-custom-${col.key}">${col.label}</label>
+            <input type="text" id="emp-custom-${col.key}" class="form-control" placeholder="Enter ${col.label}">
+          </div>
+        `;
+      }
+    });
+
     const formHtml = `
       <div style="text-align: left;">
         <div class="form-group" style="margin-bottom: 12px;">
@@ -145,6 +199,9 @@ function renderEmployeeDirectory(container) {
           </div>
         </div>
 
+        <!-- Custom Fields Section -->
+        ${customFieldsHtml}
+
         <div style="display: flex; gap: 12px; margin-top: 10px;">
           <button type="button" class="btn btn-secondary btn-autofill-emp" style="background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2);"><i data-lucide="sparkles" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: middle;"></i> Autofill Demo</button>
         </div>
@@ -165,6 +222,14 @@ function renderEmployeeDirectory(container) {
           base_salary: parseFloat(formEl.querySelector('#emp-salary-amt').value),
           joining_date: formEl.querySelector('#emp-join').value
         };
+
+        // Collect custom fields values
+        headers.forEach(col => {
+          if (!standardKeys.includes(col.key)) {
+            const inputVal = formEl.querySelector(`#emp-custom-${col.key}`)?.value || '';
+            payload[col.key] = inputVal;
+          }
+        });
 
         dbState.createEmployee(payload);
         renderEmployeeDirectory(container);
@@ -190,6 +255,14 @@ function renderEmployeeDirectory(container) {
           modalEl.querySelector('#emp-salary-type').value = 'Monthly';
           modalEl.querySelector('#emp-salary-amt').value = '45000';
           modalEl.querySelector('#emp-join').value = today;
+
+          // Fill custom fields with demo data
+          headers.forEach(col => {
+            if (!standardKeys.includes(col.key)) {
+              const inputEl = modalEl.querySelector(`#emp-custom-${col.key}`);
+              if (inputEl) inputEl.value = 'Demo Value';
+            }
+          });
         });
       }
       if (window.lucide) window.lucide.createIcons();
@@ -198,11 +271,15 @@ function renderEmployeeDirectory(container) {
 
   // Wire up employee CSV Export
   container.querySelector('#btn-export-emp').addEventListener('click', () => {
-    const headers = ["Employee ID", "Full Name", "Email Address", "Mobile Number", "Residential Address", "PAN (Tax ID)", "Aadhaar Status", "Designation", "Salary Type", "Base Salary", "Joining Date"];
-    const csvRows = [headers.map(h => `"${h}"`).join(',')];
+    // Collect all active headers for CSV
+    const csvHeaders = ["Employee ID", "Full Name", "Email Address", "Mobile Number", "Residential Address", "PAN (Tax ID)", "Aadhaar Status", "Designation", "Salary Type", "Base Salary", "Joining Date"];
+    const customHeaders = headers.filter(h => !standardKeys.includes(h.key));
+    customHeaders.forEach(ch => csvHeaders.push(ch.label));
+
+    const csvRows = [csvHeaders.map(h => `"${h}"`).join(',')];
     
     state.employees.forEach(emp => {
-      csvRows.push([
+      const rowData = [
         emp.employee_id,
         emp.name,
         emp.email,
@@ -214,7 +291,14 @@ function renderEmployeeDirectory(container) {
         emp.salary_type,
         emp.base_salary,
         emp.joining_date
-      ].map(val => `"${String(val).replace(/"/g, '""')}"`).join(','));
+      ];
+
+      // Append custom columns
+      customHeaders.forEach(ch => {
+        rowData.push(emp[ch.key] || '');
+      });
+
+      csvRows.push(rowData.map(val => `"${String(val).replace(/"/g, '""')}"`).join(','));
     });
 
     const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
@@ -257,7 +341,8 @@ function renderEmployeeDirectory(container) {
           return result.map(val => val.replace(/^"(.*)"$/, '$1').replace(/""/g, '"'));
         };
 
-        const rawHeaders = splitCSVLine(lines[0]).map(h => h.toLowerCase());
+        const rawHeaders = splitCSVLine(lines[0]).map(h => h.toLowerCase().trim());
+        const employeesToCreate = [];
         
         for (let i = 1; i < lines.length; i++) {
           const cells = splitCSVLine(lines[i]);
@@ -268,23 +353,32 @@ function renderEmployeeDirectory(container) {
             }
           });
 
-          try {
-            dbState.createEmployee({
-              employee_id: row['employee id'] || row['employee_id'] || '',
-              name: row['full name'] || row['name'] || row['employee name'] || '',
-              email: row['email address'] || row['email'] || '',
-              mobile: row['mobile number'] || row['mobile'] || row['phone'] || '',
-              address: row['residential address'] || row['address'] || '',
-              pan: row['pan (tax id)'] || row['pan'] || '',
-              aadhaar_status: row['aadhaar status'] || row['aadhaar_status'] || 'Verified (Physical Check)',
-              designation: row['designation'] || '',
-              salary_type: row['salary type'] || row['salary_type'] || 'Monthly',
-              base_salary: parseFloat(String(row['base salary'] || row['base_salary'] || '0').replace(/[^\d.]/g, '')) || 0,
-              joining_date: row['joining date'] || row['joining_date'] || new Date().toISOString().split('T')[0]
-            });
-          } catch (err) {
-            console.error('Error onboarding imported employee:', err);
-          }
+          const empPayload = {
+            employee_id: row['employee id'] || row['employee_id'] || '',
+            name: row['full name'] || row['name'] || row['employee name'] || '',
+            email: row['email address'] || row['email'] || '',
+            mobile: row['mobile number'] || row['mobile'] || row['phone'] || '',
+            address: row['residential address'] || row['address'] || '',
+            pan: row['pan (tax id)'] || row['pan'] || '',
+            aadhaar_status: row['aadhaar status'] || row['aadhaar_status'] || 'Verified (Physical Check)',
+            designation: row['designation'] || '',
+            salary_type: row['salary type'] || row['salary_type'] || 'Monthly',
+            base_salary: parseFloat(String(row['base salary'] || row['base_salary'] || '0').replace(/[^\d.]/g, '')) || 0,
+            joining_date: row['joining date'] || row['joining_date'] || new Date().toISOString().split('T')[0]
+          };
+
+          // Collect custom fields dynamically from CSV
+          headers.forEach(col => {
+            if (!standardKeys.includes(col.key)) {
+              empPayload[col.key] = row[col.key] || row[col.label.toLowerCase()] || '';
+            }
+          });
+
+          employeesToCreate.push(empPayload);
+        }
+        
+        if (employeesToCreate.length > 0) {
+          dbState.createEmployees(employeesToCreate);
         }
         
         renderEmployeeDirectory(container);
@@ -365,6 +459,21 @@ function renderProfileOverview(mount, employee) {
 
   const panMasked = employee.pan ? employee.pan.slice(0, 5) + '****' + employee.pan.slice(-1) : 'N/A';
 
+  const standardKeys = ['name', 'employee_id', 'designation', 'email', 'mobile', 'address', 'pan', 'aadhaar_status', 'joining_date', 'salary_type', 'base_salary'];
+  let customMetadataHtml = '';
+  if (dbState.state.settings.employeeColumns) {
+    dbState.state.settings.employeeColumns.forEach(col => {
+      if (!standardKeys.includes(col.key)) {
+        customMetadataHtml += `
+          <div style="display: flex; justify-content: space-between;">
+            <span style="color: var(--text-secondary);">${col.label}:</span>
+            <strong>${employee[col.key] || 'N/A'}</strong>
+          </div>
+        `;
+      }
+    });
+  }
+
   mount.innerHTML = `
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
       <!-- Stats Cards -->
@@ -400,6 +509,9 @@ function renderProfileOverview(mount, employee) {
           <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Address:</span><strong>${employee.address || 'N/A'}</strong></div>
           <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Joining Date:</span><strong>${employee.joining_date}</strong></div>
           
+          <!-- Custom Columns Rendering -->
+          ${customMetadataHtml}
+
           <!-- Data minimization check: Display PAN masked, Aadhaar as status without plaintext values -->
           <div style="display: flex; justify-content: space-between; border-top: 1px dashed var(--border-glass); padding-top: 8px; margin-top: 5px;">
             <span style="color: var(--text-secondary);">PAN (Tax ID):</span>
@@ -650,7 +762,10 @@ function renderAttendanceRoster(container) {
           <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">Update rosters for administrative audit</p>
         </div>
 
-        <div style="display: flex; gap: 10px; align-items: center;">
+        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <button class="btn btn-secondary" id="btn-bulk-present" style="padding: 6px 12px; font-size: 0.85rem; background: var(--debit-bg); color: var(--debit-color); border: 1px solid rgba(16, 185, 129, 0.2);"><i data-lucide="check-square" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: middle;"></i> Mark Present</button>
+          <button class="btn btn-secondary" id="btn-bulk-absent" style="padding: 6px 12px; font-size: 0.85rem; background: var(--credit-bg); color: var(--credit-color); border: 1px solid rgba(239, 68, 68, 0.2);"><i data-lucide="x-square" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: middle;"></i> Mark Absent</button>
+          <div style="width: 1px; height: 18px; background-color: var(--border-glass); margin: 0 5px;"></div>
           <button class="btn btn-secondary" id="btn-export-attendance" style="padding: 6px 12px; font-size: 0.85rem;"><i data-lucide="download" style="width: 14px; height: 14px; margin-right: 4px;"></i> Export Roster</button>
           <label class="btn btn-secondary" style="cursor: pointer; padding: 6px 12px; font-size: 0.85rem; margin: 0;">
             <i data-lucide="upload" style="width: 14px; height: 14px; margin-right: 4px;"></i> Import Roster
@@ -668,6 +783,7 @@ function renderAttendanceRoster(container) {
         <table>
           <thead>
             <tr>
+              <th style="width: 40px; text-align: center;"><input type="checkbox" id="bulk-select-attendance-header"></th>
               <th>Employee Name</th>
               <th>Designation</th>
               <th>Status Today</th>
@@ -780,6 +896,7 @@ function renderAttendanceRoster(container) {
 
       const tr = document.createElement('tr');
       tr.innerHTML = `
+        <td style="text-align: center;"><input type="checkbox" class="row-select-attendance" data-emp-id="${emp.employee_id}"></td>
         <td style="font-weight: 600;">${emp.name}</td>
         <td style="font-size: 0.85rem; color: var(--text-secondary);">${emp.designation}</td>
         <td>
@@ -823,8 +940,45 @@ function renderAttendanceRoster(container) {
       rosterBody.appendChild(tr);
     });
 
+    // Select-all checkbox logic
+    const headerChk = container.querySelector('#bulk-select-attendance-header');
+    if (headerChk) {
+      headerChk.checked = false; // reset on re-render
+      headerChk.addEventListener('change', (e) => {
+        const rowChks = rosterBody.querySelectorAll('.row-select-attendance');
+        rowChks.forEach(chk => chk.checked = e.target.checked);
+      });
+    }
+
     if (window.lucide) window.lucide.createIcons();
   }
+
+  // Bulk actions event handlers
+  const handleBulkMark = (status) => {
+    const checkedRows = rosterBody.querySelectorAll('.row-select-attendance:checked');
+    if (checkedRows.length === 0) {
+      alert("Please select at least one employee first.");
+      return;
+    }
+
+    const updates = [];
+    checkedRows.forEach(chk => {
+      const empId = chk.getAttribute('data-emp-id');
+      const tr = chk.closest('tr');
+      const ot = tr.querySelector('.roster-ot-input').value;
+      updates.push({
+        employeeId: empId,
+        status: status,
+        overtimeHours: ot
+      });
+    });
+
+    dbState.recordAttendanceBatch(updates, rosterDateInput.value);
+    renderRosterRows();
+  };
+
+  container.querySelector('#btn-bulk-present').addEventListener('click', () => handleBulkMark('Present'));
+  container.querySelector('#btn-bulk-absent').addEventListener('click', () => handleBulkMark('Absent'));
 
   rosterDateInput.addEventListener('change', renderRosterRows);
   renderRosterRows();

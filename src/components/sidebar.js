@@ -1,6 +1,17 @@
 // GlassERP Pro V2 Sidebar Navigation Component
 
 export function renderSidebar(container, activeRoute, onNavigate) {
+  // Preserve open status on mobile if it was already open
+  const isOpen = container.classList.contains('open');
+
+  // Create or retrieve mobile backdrop overlay
+  let overlay = document.querySelector('.sidebar-overlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.className = 'sidebar-overlay';
+    document.body.appendChild(overlay);
+  }
+
   // Navigation structure definition
   const menuStructure = [
     {
@@ -82,6 +93,9 @@ export function renderSidebar(container, activeRoute, onNavigate) {
       `;
       a.addEventListener('click', (e) => {
         e.preventDefault();
+        // Close sidebar on mobile after navigating
+        container.classList.remove('open');
+        overlay.classList.remove('active');
         onNavigate(item.route);
       });
       menuNav.appendChild(a);
@@ -89,6 +103,70 @@ export function renderSidebar(container, activeRoute, onNavigate) {
   });
 
   container.appendChild(menuNav);
+
+  // Overlay click event listener to close drawer on mobile
+  overlay.onclick = () => {
+    container.classList.remove('open');
+    overlay.classList.remove('active');
+    const toggleIcon = toggleBtn.querySelector('i');
+    if (toggleIcon) {
+      toggleIcon.setAttribute('data-lucide', 'chevron-right');
+      if (window.lucide) window.lucide.createIcons();
+    }
+  };
+
+  // Unified toggle/collapse handle button
+  const appEl = document.getElementById('app');
+  const isCollapsed = appEl ? appEl.classList.contains('sidebar-collapsed') : false;
+
+  const toggleBtn = document.createElement('button');
+  toggleBtn.className = 'sidebar-toggle-btn';
+  toggleBtn.setAttribute('title', 'Toggle Navigation Sidebar');
+  
+  let initialIcon = 'chevron-left';
+  if (window.innerWidth <= 768) {
+    initialIcon = isOpen ? 'chevron-left' : 'chevron-right';
+  } else {
+    initialIcon = isCollapsed ? 'chevron-right' : 'chevron-left';
+  }
+  
+  toggleBtn.innerHTML = `<i data-lucide="${initialIcon}"></i>`;
+  toggleBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    
+    if (window.innerWidth <= 768) {
+      const willOpen = !container.classList.contains('open');
+      container.classList.toggle('open', willOpen);
+      overlay.classList.toggle('active', willOpen);
+      
+      const toggleIcon = toggleBtn.querySelector('i');
+      if (toggleIcon) {
+        toggleIcon.setAttribute('data-lucide', willOpen ? 'chevron-left' : 'chevron-right');
+        if (window.lucide) window.lucide.createIcons();
+      }
+    } else {
+      if (appEl) {
+        const willCollapse = !appEl.classList.contains('sidebar-collapsed');
+        appEl.classList.toggle('sidebar-collapsed', willCollapse);
+        
+        const toggleIcon = toggleBtn.querySelector('i');
+        if (toggleIcon) {
+          toggleIcon.setAttribute('data-lucide', willCollapse ? 'chevron-right' : 'chevron-left');
+          if (window.lucide) window.lucide.createIcons();
+        }
+      }
+    }
+  });
+  container.appendChild(toggleBtn);
+
+  // Restore open classes if state is active
+  if (isOpen) {
+    container.classList.add('open');
+    overlay.classList.add('active');
+  } else {
+    container.classList.remove('open');
+    overlay.classList.remove('active');
+  }
 
   if (window.lucide) {
     window.lucide.createIcons();
