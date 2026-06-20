@@ -1570,6 +1570,40 @@ class GlassERPState {
     return newVendor;
   }
 
+  updateCustomer(customerId, payload) {
+    return this.executeTransaction(() => {
+      const preState = clone(this.state);
+      const cust = this.state.customers.find(c => c.id === customerId);
+      if (!cust) throw new Error(`Customer with ID ${customerId} not found.`);
+      
+      cust.name = payload.name;
+      cust.contact = payload.contact || '';
+      cust.email = payload.email || '';
+      cust.phone = payload.phone || '';
+      cust.outstanding = round(parseFloat(payload.outstanding) || 0);
+
+      this.logAudit('UPDATE_CUSTOMER', `customers/${customerId}`, preState, this.state);
+      return cust;
+    });
+  }
+
+  updateVendor(vendorId, payload) {
+    return this.executeTransaction(() => {
+      const preState = clone(this.state);
+      const vendor = this.state.vendors.find(v => v.id === vendorId);
+      if (!vendor) throw new Error(`Vendor with ID ${vendorId} not found.`);
+      
+      vendor.name = payload.name;
+      vendor.contact = payload.contact || '';
+      vendor.email = payload.email || '';
+      vendor.phone = payload.phone || '';
+      vendor.outstanding = round(parseFloat(payload.outstanding) || 0);
+
+      this.logAudit('UPDATE_VENDOR', `vendors/${vendorId}`, preState, this.state);
+      return vendor;
+    });
+  }
+
   // Bank Account Operations
   addBankAccount(payload) {
     const preState = clone(this.state);

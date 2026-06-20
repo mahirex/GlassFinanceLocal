@@ -650,7 +650,14 @@ function renderCustomers(container) {
     { key: 'contact', label: 'Primary Contact Person' },
     { key: 'email', label: 'Email' },
     { key: 'phone', label: 'Mobile Number' },
-    { key: 'outstanding', label: 'Outstanding Receivables (₹)', render: val => inrFormat.format(val) }
+    { key: 'outstanding', label: 'Outstanding Receivables (₹)', render: val => inrFormat.format(val) },
+    { key: 'id', label: 'Actions', render: (val, row) => {
+      return `
+        <button class="btn btn-secondary btn-edit-customer" data-id="${val}" style="padding: 4px 8px; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2); cursor: pointer;">
+          <i data-lucide="pencil" style="width: 12px; height: 12px;"></i> Edit
+        </button>
+      `;
+    }}
   ];
 
   const table = new GlassTable({
@@ -674,6 +681,16 @@ function renderCustomers(container) {
         });
       });
       renderCustomers(container);
+    }
+  });
+
+  // Bind Edit Customer button
+  container.querySelector('#customers-table-mount').addEventListener('click', (e) => {
+    const btnEdit = e.target.closest('.btn-edit-customer');
+    if (btnEdit) {
+      e.stopPropagation();
+      const customerId = btnEdit.getAttribute('data-id');
+      showEditCustomerModal(customerId, container);
     }
   });
 
@@ -745,6 +762,62 @@ function renderCustomers(container) {
   }
 }
 
+function showEditCustomerModal(customerId, container) {
+  const cust = dbState.state.customers.find(c => c.id === customerId);
+  if (!cust) return;
+
+  const formHtml = `
+    <div style="text-align: left;">
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label for="cust-name">Company Name *</label>
+        <input type="text" id="cust-name" class="form-control" value="${cust.name}" placeholder="e.g. Acme Builders Ltd" required>
+      </div>
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label for="cust-contact">Primary Contact Person *</label>
+        <input type="text" id="cust-contact" class="form-control" value="${cust.contact}" placeholder="e.g. John Doe" required>
+      </div>
+      <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div class="form-group">
+          <label for="cust-email">Email Address</label>
+          <input type="email" id="cust-email" class="form-control" value="${cust.email}" placeholder="e.g. info@acme.com">
+        </div>
+        <div class="form-group">
+          <label for="cust-phone">Mobile Number</label>
+          <input type="tel" id="cust-phone" class="form-control" value="${cust.phone}" placeholder="e.g. 9876543210">
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label for="cust-outstanding">Outstanding Receivables (₹) *</label>
+        <input type="number" step="0.01" id="cust-outstanding" class="form-control" value="${cust.outstanding}" placeholder="0.00">
+      </div>
+    </div>
+  `;
+
+  showModal('Edit Customer Details', formHtml, (formEl) => {
+    try {
+      const payload = {
+        name: formEl.querySelector('#cust-name').value.trim(),
+        contact: formEl.querySelector('#cust-contact').value.trim(),
+        email: formEl.querySelector('#cust-email').value.trim(),
+        phone: formEl.querySelector('#cust-phone').value.trim(),
+        outstanding: parseFloat(formEl.querySelector('#cust-outstanding').value) || 0
+      };
+
+      if (!payload.name || !payload.contact) {
+        alert('Company name and contact person are required.');
+        return false;
+      }
+
+      dbState.updateCustomer(customerId, payload);
+      renderCustomers(container);
+      return true;
+    } catch (err) {
+      alert(err.message);
+      return false;
+    }
+  });
+}
+
 // 5. VENDORS DIRECTORY
 function renderVendors(container) {
   const state = dbState.state;
@@ -765,7 +838,14 @@ function renderVendors(container) {
     { key: 'contact', label: 'Sales Contact Person' },
     { key: 'email', label: 'Email' },
     { key: 'phone', label: 'Phone' },
-    { key: 'outstanding', label: 'Accounts Payable Owed (₹)', render: val => inrFormat.format(val) }
+    { key: 'outstanding', label: 'Accounts Payable Owed (₹)', render: val => inrFormat.format(val) },
+    { key: 'id', label: 'Actions', render: (val, row) => {
+      return `
+        <button class="btn btn-secondary btn-edit-vendor" data-id="${val}" style="padding: 4px 8px; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2); cursor: pointer;">
+          <i data-lucide="pencil" style="width: 12px; height: 12px;"></i> Edit
+        </button>
+      `;
+    }}
   ];
 
   const table = new GlassTable({
@@ -789,6 +869,16 @@ function renderVendors(container) {
         });
       });
       renderVendors(container);
+    }
+  });
+
+  // Bind Edit Vendor button
+  container.querySelector('#vendors-table-mount').addEventListener('click', (e) => {
+    const btnEdit = e.target.closest('.btn-edit-vendor');
+    if (btnEdit) {
+      e.stopPropagation();
+      const vendorId = btnEdit.getAttribute('data-id');
+      showEditVendorModal(vendorId, container);
     }
   });
 
@@ -858,6 +948,62 @@ function renderVendors(container) {
   if (window.lucide) {
     window.lucide.createIcons();
   }
+}
+
+function showEditVendorModal(vendorId, container) {
+  const vendor = dbState.state.vendors.find(v => v.id === vendorId);
+  if (!vendor) return;
+
+  const formHtml = `
+    <div style="text-align: left;">
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label for="vend-name">Supplier Company Name *</label>
+        <input type="text" id="vend-name" class="form-control" value="${vendor.name}" placeholder="e.g. Asahi Glass India" required>
+      </div>
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label for="vend-contact">Sales Contact Person *</label>
+        <input type="text" id="vend-contact" class="form-control" value="${vendor.contact}" placeholder="e.g. Jane Smith" required>
+      </div>
+      <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+        <div class="form-group">
+          <label for="vend-email">Email Address</label>
+          <input type="email" id="vend-email" class="form-control" value="${vendor.email}" placeholder="e.g. sales@asahi.com">
+        </div>
+        <div class="form-group">
+          <label for="vend-phone">Mobile Number</label>
+          <input type="tel" id="vend-phone" class="form-control" value="${vendor.phone}" placeholder="e.g. 9811223344">
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label for="vend-outstanding">Accounts Payable Owed (₹) *</label>
+        <input type="number" step="0.01" id="vend-outstanding" class="form-control" value="${vendor.outstanding}" placeholder="0.00">
+      </div>
+    </div>
+  `;
+
+  showModal('Edit Vendor Details', formHtml, (formEl) => {
+    try {
+      const payload = {
+        name: formEl.querySelector('#vend-name').value.trim(),
+        contact: formEl.querySelector('#vend-contact').value.trim(),
+        email: formEl.querySelector('#vend-email').value.trim(),
+        phone: formEl.querySelector('#vend-phone').value.trim(),
+        outstanding: parseFloat(formEl.querySelector('#vend-outstanding').value) || 0
+      };
+
+      if (!payload.name || !payload.contact) {
+        alert('Supplier company name and contact person are required.');
+        return false;
+      }
+
+      dbState.updateVendor(vendorId, payload);
+      renderVendors(container);
+      return true;
+    } catch (err) {
+      alert(err.message);
+      return false;
+    }
+  });
 }
 
 // Reusable overlay glass modal UI helper
