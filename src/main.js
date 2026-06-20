@@ -22,6 +22,7 @@ import { renderGST } from './views/gst.js';
 import { renderSettings } from './views/settings.js';
 import { renderAuditLog } from './views/auditLog.js';
 import { renderOperations } from './views/operations.js';
+import { renderPayrollCalculator } from './views/payroll.js';
 
 // Application active route mapping
 let currentRoute = 'dashboard';
@@ -46,6 +47,7 @@ const routeDisplayNames = {
   'attendance': 'Daily Attendance Overtime Matrix',
   'employee-advances': 'Employee Salary Advances Board',
   'petrol': 'Employee Petrol Advances Board',
+  'payroll-calculator': 'Employee Salary Calculator',
   'settings': 'Corporate & Accounting Settings',
   'audit-log': 'Immutable System Audit trails'
 };
@@ -173,6 +175,9 @@ function mountActiveView(container) {
     case 'employee-advances':
     case 'petrol':
       renderHR(container, currentRoute);
+      break;
+    case 'payroll-calculator':
+      renderPayrollCalculator(container);
       break;
     case 'settings':
       renderSettings(container);

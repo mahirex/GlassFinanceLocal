@@ -425,7 +425,10 @@ function renderEmployeeProfile(mount, employee, container) {
             <p style="font-size: 0.85rem; color: var(--text-secondary);">${employee.designation} | ID: <span style="font-family: monospace; color: var(--accent-color); font-weight: 700;">${employee.employee_id}</span></p>
           </div>
         </div>
-        <div>
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn btn-primary" id="btn-calc-salary-shortcut" style="padding: 6px 12px; font-size: 0.8rem; display: flex; align-items: center; gap: 4px;">
+            <i data-lucide="calculator" style="width: 14px; height: 14px;"></i> Calculate Salary
+          </button>
           <button type="button" class="btn btn-secondary" id="btn-edit-employee" style="padding: 6px 12px; font-size: 0.8rem;">
             <i data-lucide="edit" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: middle;"></i> Edit Details
           </button>
@@ -445,6 +448,17 @@ function renderEmployeeProfile(mount, employee, container) {
       <div id="profile-tab-mount" style="min-height: 300px;"></div>
     </div>
   `;
+
+  const btnCalc = mount.querySelector('#btn-calc-salary-shortcut');
+  if (btnCalc) {
+    btnCalc.addEventListener('click', () => {
+      localStorage.setItem('salary_calculator_highlight_employee', employee.employee_id);
+      const sidebarLink = document.querySelector(`.menu-item[data-route="payroll-calculator"]`);
+      if (sidebarLink) {
+        sidebarLink.click();
+      }
+    });
+  }
 
   const tabOverview = mount.querySelector('#prof-btn-overview');
   const tabAttendance = mount.querySelector('#prof-btn-attendance');

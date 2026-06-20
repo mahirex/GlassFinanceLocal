@@ -50,7 +50,8 @@ export function renderSidebar(container, activeRoute, onNavigate) {
         { route: 'employees', label: 'Employees', icon: 'contact' },
         { route: 'attendance', label: 'Attendance', icon: 'calendar-days' },
         { route: 'employee-advances', label: 'Employee Advances', icon: 'coins' },
-        { route: 'petrol', label: 'Petrol Advances', icon: 'fuel' }
+        { route: 'petrol', label: 'Petrol Advances', icon: 'fuel' },
+        { route: 'payroll-calculator', label: 'Salary Calculator', icon: 'calculator' }
       ]
     },
     {

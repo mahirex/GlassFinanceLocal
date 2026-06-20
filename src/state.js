@@ -304,6 +304,7 @@ class GlassERPState {
     if (!this.state.projectTasks) this.state.projectTasks = [];
     if (!this.state.auditLogs) this.state.auditLogs = [];
     if (!this.state.systemLogs) this.state.systemLogs = [];
+    if (!this.state.payrollSheet) this.state.payrollSheet = [];
 
     // Migrate settings automatically if not already set to the new Bhopal coordinates
     if (this.state.settings) {
@@ -564,7 +565,8 @@ class GlassERPState {
       systemLogs: [
         { id: 'log-1', date: '2026-06-15', hardwareName: 'Dorma Glass Hinge', partyName: 'Apex Builders Ltd', fitterName: 'Rohan Sharma', input: '12', output: '10', blank1: '', blank2: '', total: '2' },
         { id: 'log-2', date: '2026-06-16', hardwareName: 'Saint-Gobain Silicon Glue', partyName: 'Metro Infra Corp', fitterName: 'Sunita Verma', input: '50', output: '45', blank1: '', blank2: '', total: '5' }
-      ]
+      ],
+      payrollSheet: []
     };
     // Calculate initial balances/costs/gst from the initial ledger entries or populate them
     this.recalculateAllBalances();
@@ -1313,6 +1315,47 @@ class GlassERPState {
     const preState = clone(this.state);
     this.state.settings = { ...this.state.settings, ...newSettings };
     this.logAudit('UPDATE_SETTINGS', 'settings', preState, this.state);
+    this.saveState();
+  }
+
+  updatePayrollEntry(employeeId, data) {
+    const preState = clone(this.state);
+    if (!this.state.payrollSheet) this.state.payrollSheet = [];
+    let entry = this.state.payrollSheet.find(p => p.employee_id === employeeId);
+    if (!entry) {
+      entry = { employee_id: employeeId };
+      this.state.payrollSheet.push(entry);
+    }
+    
+    entry.present_days = data.present_days !== undefined ? parseFloat(data.present_days) : (entry.present_days ?? 0);
+    entry.per_day_salary = data.per_day_salary !== undefined ? parseFloat(data.per_day_salary) : (entry.per_day_salary ?? 0);
+    entry.pf = data.pf !== undefined ? parseFloat(data.pf) : (entry.pf ?? 0);
+    entry.advance_taken = data.advance_taken !== undefined ? parseFloat(data.advance_taken) : (entry.advance_taken ?? 0);
+    entry.final_salary = data.final_salary !== undefined ? parseFloat(data.final_salary) : (entry.final_salary ?? 0);
+
+    this.logAudit('UPDATE_PAYROLL', `payroll/${employeeId}`, preState, this.state);
+    this.saveState();
+    return entry;
+  }
+
+  updatePayrollBatch(entries) {
+    const preState = clone(this.state);
+    if (!this.state.payrollSheet) this.state.payrollSheet = [];
+    
+    entries.forEach(item => {
+      let entry = this.state.payrollSheet.find(p => p.employee_id === item.employee_id);
+      if (!entry) {
+        entry = { employee_id: item.employee_id };
+        this.state.payrollSheet.push(entry);
+      }
+      entry.present_days = item.present_days !== undefined ? parseFloat(item.present_days) : (entry.present_days ?? 0);
+      entry.per_day_salary = item.per_day_salary !== undefined ? parseFloat(item.per_day_salary) : (entry.per_day_salary ?? 0);
+      entry.pf = item.pf !== undefined ? parseFloat(item.pf) : (entry.pf ?? 0);
+      entry.advance_taken = item.advance_taken !== undefined ? parseFloat(item.advance_taken) : (entry.advance_taken ?? 0);
+      entry.final_salary = item.final_salary !== undefined ? parseFloat(item.final_salary) : (entry.final_salary ?? 0);
+    });
+
+    this.logAudit('UPDATE_PAYROLL_BATCH', `payroll/batch`, preState, this.state);
     this.saveState();
   }
 
