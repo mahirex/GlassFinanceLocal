@@ -4,6 +4,37 @@ import { initialBankAccounts, initialEmployees, initialProjects, initialLedgerEn
 import { supabase } from './supabase.js';
 import { turso } from './turso.js';
 
+// Background offline local file mirroring pipeline
+export async function syncDataToOfflineFileStorage(allLogs) {
+  if (typeof window === 'undefined' || !window.localDatabaseFolderHandle) return;
+  try {
+    const targetFolder = window.localDatabaseFolderHandle;
+    const payloadFileString = JSON.stringify({
+      database_engine: "duckdb_wasm_local_mirror",
+      engine: "duckdb_wasm_local_mirror",
+      schema_version: "2026.1",
+      timestamp: Date.now(),
+      updated_at: new Date().toISOString(),
+      total_records: allLogs.length,
+      records: allLogs,
+      data: allLogs
+    }, null, 2);
+
+    const fileHandle = await targetFolder.getFileHandle('glass_finance_local.duckdb', { create: true });
+    const writableStream = await fileHandle.createWritable();
+    await writableStream.write(payloadFileString);
+    await writableStream.close();
+    console.log("Automatically mirrored active records securely to selected local storage directory.");
+    
+    // Update last sync time state/localstorage if settings tab is listening
+    const timeString = new Date().toLocaleTimeString();
+    localStorage.setItem('duckdb_last_sync_timestamp', timeString);
+  } catch (error) {
+    console.error("Background local-first system sync encountered an error writing files:", error);
+  }
+}
+
+
 // Deep clone helper
 function clone(obj) {
   return JSON.parse(JSON.stringify(obj));
@@ -121,6 +152,11 @@ class GlassERPState {
         .maybeSingle();
 
       if (error) {
+        if (error.code === 'PGRST205' || (error.message && error.message.includes('glasserp_state'))) {
+          console.warn("Supabase: 'glasserp_state' table not found. Please run the SQL migration in your Supabase dashboard.");
+          this.dbStatus.supabase = 'offline';
+          return null;
+        }
         this.dbStatus.supabase = 'offline';
         throw error;
       }
@@ -174,15 +210,26 @@ class GlassERPState {
 
   async saveStateToSupabase() {
     if (!supabase) return;
-    const { error } = await supabase
-      .from('glasserp_state')
-      .upsert({ id: 1, state: this.state, updated_at: new Date().toISOString() });
-    
-    if (error) {
+    try {
+      const { error } = await supabase
+        .from('glasserp_state')
+        .upsert({ id: 1, state: this.state, updated_at: new Date().toISOString() });
+      
+      if (error) {
+        if (error.code === 'PGRST205' || (error.message && error.message.includes('glasserp_state'))) {
+          console.warn("Supabase: Cannot save because 'glasserp_state' table is missing.");
+          this.dbStatus.supabase = 'offline';
+          return;
+        }
+        this.dbStatus.supabase = 'offline';
+        throw error;
+      }
+      this.dbStatus.supabase = 'online';
+    } catch (err) {
+      console.error('Failed to save state to Supabase:', err);
       this.dbStatus.supabase = 'offline';
-      throw error;
+      throw err;
     }
-    this.dbStatus.supabase = 'online';
   }
 
   async saveStateToTurso() {
@@ -256,6 +303,30 @@ class GlassERPState {
     if (this.state.petrolRate === undefined) this.state.petrolRate = 120;
     if (!this.state.projectTasks) this.state.projectTasks = [];
     if (!this.state.auditLogs) this.state.auditLogs = [];
+    if (!this.state.systemLogs) this.state.systemLogs = [];
+
+    // Migrate settings automatically if not already set to the new Bhopal coordinates
+    if (this.state.settings) {
+      if (this.state.settings.companyName === 'GLASSOLOGY' || !this.state.settings.companyName || this.state.settings.companyAddress?.includes('Sai Chambers') || this.state.settings.companyAddress?.includes('Navi Mumbai')) {
+        this.state.settings.companyName = 'Glassology';
+        this.state.settings.companyAddress = 'A/4, Govindpura Industrial Area, Bhopal, Madhya Pradesh 462023';
+        this.state.settings.companyPhone = '+91 9826330806';
+        this.state.settings.companyEmail = 'glassology.bpl@gmail.com';
+        this.state.settings.companyGstin = '23AARPO9778L1ZM';
+        this.state.settings.gstin = '23AARPO9778L1ZM';
+        this.state.settings.gstStateCode = '23';
+        this.state.settings.defaultGstRate = 18;
+        this.state.settings.bankName = 'INDIAN BANK';
+        this.state.settings.bankAccName = 'GLASSOLOGY';
+        this.state.settings.bankAccNo = '8102836791';
+        this.state.settings.bankIfsc = 'IDIB000T609';
+        this.state.settings.bankBranch = 'Bhopal Branch';
+        this.state.settings.termsAndConditions = '1. Goods once sold will not be taken back.\n2. Interest @ 18% p.a. will be charged if payment is not made within 15 days.\n3. Subject to Bhopal Jurisdiction.';
+      }
+      if (this.state.settings.defaultGstRate === undefined) {
+        this.state.settings.defaultGstRate = 18;
+      }
+    }
   }
 
   loadState() {
@@ -489,6 +560,10 @@ class GlassERPState {
         { id: 'TSK-103', project_id: 'PRJ-101', name: 'Aluminum Framing Alignment', description: 'Assemble framing brackets at floor 3', status: 'Review' },
         { id: 'TSK-104', project_id: 'PRJ-101', name: 'Initial Design Approval', description: 'Client sign-off on shop drawings', status: 'Done' },
         { id: 'TSK-105', project_id: 'PRJ-102', name: 'Foundation Anchorage Check', description: 'Verify concrete load capacity', status: 'To Do' }
+      ],
+      systemLogs: [
+        { id: 'log-1', date: '2026-06-15', hardwareName: 'Dorma Glass Hinge', partyName: 'Apex Builders Ltd', fitterName: 'Rohan Sharma', input: '12', output: '10', blank1: '', blank2: '', total: '2' },
+        { id: 'log-2', date: '2026-06-16', hardwareName: 'Saint-Gobain Silicon Glue', partyName: 'Metro Infra Corp', fitterName: 'Sunita Verma', input: '50', output: '45', blank1: '', blank2: '', total: '5' }
       ]
     };
     // Calculate initial balances/costs/gst from the initial ledger entries or populate them
@@ -501,6 +576,10 @@ class GlassERPState {
       localStorage.setItem('glasserp_state_v2', JSON.stringify(this.state));
     }
     this.notify();
+
+    if (this.state.systemLogs) {
+      syncDataToOfflineFileStorage(this.state.systemLogs).catch(console.error);
+    }
 
     const promises = [];
     if (supabase) {
@@ -1083,16 +1162,19 @@ class GlassERPState {
     const newEmployee = {
       employee_id: payload.employee_id || `EMP-${100 + this.state.employees.length + 1}`,
       name: payload.name,
-      email: payload.email,
-      mobile: payload.mobile,
-      address: payload.address,
+      email: payload.email || '',
+      mobile: payload.mobile || '',
+      address: payload.address || '',
       profile_image: payload.profile_image || '',
       pan: cleanPan,
       aadhaar_status: payload.aadhaar_status || 'Verified (Physical Check)',
       joining_date: payload.joining_date || new Date().toISOString().split('T')[0],
-      designation: payload.designation,
+      designation: payload.designation || '',
       salary_type: payload.salary_type || 'Monthly',
       base_salary: round(parseFloat(payload.base_salary) || 0),
+      bank_name: payload.bank_name || '',
+      account_number: payload.account_number || '',
+      ifsc_code: payload.ifsc_code || '',
       advance_due: 0,
       attendance: {}, // Date key e.g. "2026-06-09" -> "Present", "Absent", "Half-Day", "Leave"
       overtime: {} // Date key -> hours
@@ -1134,6 +1216,9 @@ class GlassERPState {
         designation: payload.designation || 'Staff',
         salary_type: payload.salary_type || 'Monthly',
         base_salary: round(parseFloat(payload.base_salary) || 0),
+        bank_name: payload.bank_name || '',
+        account_number: payload.account_number || '',
+        ifsc_code: payload.ifsc_code || '',
         advance_due: 0,
         attendance: {},
         overtime: {}
@@ -1151,6 +1236,46 @@ class GlassERPState {
 
     this.logAudit('CREATE_EMPLOYEES_BATCH', 'employees', preState, this.state);
     this.saveState();
+  }
+
+  updateEmployee(employeeId, payload) {
+    const preState = clone(this.state);
+    const emp = this.state.employees.find(e => e.employee_id === employeeId);
+    if (!emp) throw new Error(`Employee with ID ${employeeId} not found.`);
+
+    // PAN regex check
+    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+    const cleanPan = payload.pan ? String(payload.pan).trim().toUpperCase() : '';
+    if (cleanPan && !panRegex.test(cleanPan)) {
+      throw new Error('Invalid PAN Number format. Must match standard format (e.g. ABCDE1234F).');
+    }
+
+    // Update standard fields
+    emp.name = payload.name || emp.name;
+    emp.email = payload.email || '';
+    emp.mobile = payload.mobile || '';
+    emp.address = payload.address || '';
+    emp.pan = cleanPan;
+    emp.aadhaar_status = payload.aadhaar_status || 'Verified (Physical Check)';
+    emp.designation = payload.designation || '';
+    emp.salary_type = payload.salary_type || 'Monthly';
+    emp.base_salary = round(parseFloat(payload.base_salary) || 0);
+    emp.joining_date = payload.joining_date || emp.joining_date;
+    emp.bank_name = payload.bank_name || '';
+    emp.account_number = payload.account_number || '';
+    emp.ifsc_code = payload.ifsc_code || '';
+
+    // Copy any custom/dynamic properties
+    const standardFields = ['employee_id', 'name', 'email', 'mobile', 'address', 'pan', 'aadhaar_status', 'designation', 'salary_type', 'base_salary', 'joining_date', 'bank_name', 'account_number', 'ifsc_code'];
+    Object.keys(payload).forEach(key => {
+      if (!standardFields.includes(key)) {
+        emp[key] = payload[key];
+      }
+    });
+
+    this.logAudit('UPDATE_EMPLOYEE', `employees/${employeeId}`, preState, this.state);
+    this.saveState();
+    return emp;
   }
 
   recordAttendance(employeeId, date, status, overtimeHours = 0) {

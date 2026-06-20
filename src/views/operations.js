@@ -79,43 +79,81 @@ function renderQuotations(container) {
       <div class="quotation-maker-modal" style="max-height: 70vh; overflow-y: auto; padding-right: 5px; text-align: left;">
         <!-- Client Details Section -->
         <div style="margin-bottom: 20px; border-bottom: 1px solid var(--border-glass); padding-bottom: 10px;">
-          <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--accent-color); margin-bottom: 12px;">Client Information</h4>
+          <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+            <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--accent-color); margin: 0;">Client Information</h4>
+            <span style="font-size: 0.72rem; color: var(--text-muted); background: rgba(99,102,241,0.08); padding: 2px 8px; border-radius: 20px; border: 1px solid rgba(99,102,241,0.2);">All fields optional — fill only what you need</span>
+          </div>
           <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
             <div class="form-group">
-              <label for="quote-customer">Client Name / Company</label>
+              <label for="quote-customer" style="display:flex; justify-content:space-between;"><span>Client Name / Company</span><span style="font-size:0.7rem;color:var(--text-muted);">optional</span></label>
               <input type="text" id="quote-customer" class="form-control" placeholder="e.g. L&T Construction">
             </div>
             <div class="form-group">
-              <label for="quote-project">Project Name</label>
+              <label for="quote-project" style="display:flex; justify-content:space-between;"><span>Project Name</span><span style="font-size:0.7rem;color:var(--text-muted);">optional</span></label>
               <input type="text" id="quote-project" class="form-control" placeholder="e.g. Glass Pavilion Facade">
             </div>
           </div>
           <div class="form-group" style="margin-bottom: 12px;">
-            <label for="quote-client-address">Billing Address</label>
+            <label for="quote-client-address" style="display:flex; justify-content:space-between;"><span>Billing Address</span><span style="font-size:0.7rem;color:var(--text-muted);">optional</span></label>
             <input type="text" id="quote-client-address" class="form-control" placeholder="e.g. Powai, Mumbai">
           </div>
           <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
             <div class="form-group">
-              <label for="quote-client-email">Email Address</label>
-              <input type="email" id="quote-client-email" class="form-control" placeholder="e.g. buyer@client.com">
+              <label for="quote-client-email" style="display:flex; justify-content:space-between;"><span>Email Address</span><span style="font-size:0.7rem;color:var(--text-muted);">optional</span></label>
+              <input type="text" id="quote-client-email" class="form-control" placeholder="e.g. buyer@client.com">
             </div>
             <div class="form-group">
-              <label for="quote-client-phone">Phone / Mobile</label>
+              <label for="quote-client-phone" style="display:flex; justify-content:space-between;"><span>Phone / Mobile</span><span style="font-size:0.7rem;color:var(--text-muted);">optional</span></label>
               <input type="text" id="quote-client-phone" class="form-control" placeholder="e.g. +91 9999988888">
             </div>
           </div>
           <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
             <div class="form-group">
-              <label for="quote-client-gstin">Client GSTIN</label>
+              <label for="quote-client-gstin" style="display:flex; justify-content:space-between;"><span>Client GSTIN</span><span style="font-size:0.7rem;color:var(--text-muted);">optional</span></label>
               <input type="text" id="quote-client-gstin" class="form-control" placeholder="e.g. 27AAACL1234F1Z8">
             </div>
             <div class="form-group">
-              <label for="quote-client-state">State / Place of Supply</label>
-              <select id="quote-client-state" style="width: 100%;">
-                <option value="27">Maharashtra (27)</option>
-                <option value="29">Karnataka (29)</option>
-                <option value="07">Delhi NCR (07)</option>
-                <option value="24">Gujarat (24)</option>
+              <label for="quote-client-state" style="display:flex; justify-content:space-between;"><span>State / Place of Supply</span><span style="font-size:0.7rem;color:var(--text-muted);">optional</span></label>
+              <select id="quote-client-state" class="form-control" style="width: 100%; color: var(--text-primary); background: var(--input-bg);">
+                <option value="">— Skip / Not Applicable —</option>
+                <option value="01">01 - Jammu &amp; Kashmir</option>
+                <option value="02">02 - Himachal Pradesh</option>
+                <option value="03">03 - Punjab</option>
+                <option value="04">04 - Chandigarh</option>
+                <option value="05">05 - Uttarakhand</option>
+                <option value="06">06 - Haryana</option>
+                <option value="07">07 - Delhi</option>
+                <option value="08">08 - Rajasthan</option>
+                <option value="09">09 - Uttar Pradesh</option>
+                <option value="10">10 - Bihar</option>
+                <option value="11">11 - Sikkim</option>
+                <option value="12">12 - Arunachal Pradesh</option>
+                <option value="13">13 - Nagaland</option>
+                <option value="14">14 - Manipur</option>
+                <option value="15">15 - Mizoram</option>
+                <option value="16">16 - Tripura</option>
+                <option value="17">17 - Meghalaya</option>
+                <option value="18">18 - Assam</option>
+                <option value="19">19 - West Bengal</option>
+                <option value="20">20 - Jharkhand</option>
+                <option value="21">21 - Odisha</option>
+                <option value="22">22 - Chhattisgarh</option>
+                <option value="23">23 - Madhya Pradesh</option>
+                <option value="24">24 - Gujarat</option>
+                <option value="25">25 - Daman &amp; Diu</option>
+                <option value="26">26 - Dadra &amp; Nagar Haveli</option>
+                <option value="27" selected>27 - Maharashtra</option>
+                <option value="28">28 - Andhra Pradesh (Old)</option>
+                <option value="29">29 - Karnataka</option>
+                <option value="30">30 - Goa</option>
+                <option value="31">31 - Lakshadweep</option>
+                <option value="32">32 - Kerala</option>
+                <option value="33">33 - Tamil Nadu</option>
+                <option value="34">34 - Puducherry</option>
+                <option value="35">35 - Andaman &amp; Nicobar Islands</option>
+                <option value="36">36 - Telangana</option>
+                <option value="37">37 - Andhra Pradesh (New)</option>
+                <option value="38">38 - Ladakh</option>
               </select>
             </div>
           </div>
@@ -135,8 +173,8 @@ function renderQuotations(container) {
               </select>
             </div>
             <div class="form-group">
-              <label for="quote-validity">Valid Until</label>
-              <input type="date" id="quote-validity" class="form-control" value="${defaultValidity}" required>
+              <label for="quote-validity" style="display:flex; justify-content:space-between;"><span>Valid Until</span><span style="font-size:0.7rem;color:var(--text-muted);">optional</span></label>
+              <input type="date" id="quote-validity" class="form-control" value="${defaultValidity}">
             </div>
           </div>
         </div>
@@ -171,13 +209,34 @@ function renderQuotations(container) {
 
         <!-- Transport & Live Calculation Summary -->
         <div style="margin-top: 20px; padding: 15px; background: rgba(255, 255, 255, 0.02); border-radius: var(--border-radius-sm); border: 1px solid var(--border-glass);">
-          <div style="display: grid; grid-template-columns: 1.25fr 1fr; gap: 20px; align-items: end;">
-            <div class="form-group" style="margin: 0;">
-              <label for="quote-transport">Transport & Logistics Charges (₹)</label>
-              <input type="number" step="0.01" id="quote-transport" class="form-control" value="0" style="max-width: 200px;">
+          <div style="display: grid; grid-template-columns: 1.25fr 1fr; gap: 20px; align-items: start;">
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <div class="form-group" style="margin: 0;">
+                <label for="quote-transport">Transport &amp; Logistics Charges (₹)</label>
+                <input type="number" step="0.01" id="quote-transport" class="form-control" value="0" style="max-width: 200px;">
+              </div>
+
+              <!-- GST Selector -->
+              <div class="form-group" style="margin: 0;">
+                <label for="quote-gst-select" style="display: flex; align-items: center; gap: 8px;">
+                  GST Rate
+                  <span style="font-size: 0.72rem; color: var(--text-muted); font-weight: 400;">(optional — select or skip)</span>
+                </label>
+                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                  <select id="quote-gst-select" class="form-control" style="max-width: 180px; color: var(--text-primary); background: var(--input-bg);">
+                    <option value="0">No GST (0%)</option>
+                    <option value="5">GST 5%</option>
+                    <option value="12">GST 12%</option>
+                    <option value="18" selected>GST 18%</option>
+                    <option value="28">GST 28%</option>
+                    <option value="custom">Custom %</option>
+                  </select>
+                  <input type="number" id="quote-gst-custom" class="form-control" min="0" max="100" step="0.01" placeholder="Enter %" style="max-width: 110px; display: none; color: var(--text-primary); background: var(--input-bg);">
+                </div>
+              </div>
             </div>
             
-            <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; text-align: right;">
+            <div style="display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; text-align: right; padding-top: 4px;">
               <div style="display: flex; justify-content: space-between; gap: 20px;">
                 <span style="color: var(--text-secondary);">Subtotal:</span>
                 <span id="summary-subtotal" style="font-weight: 600; color: var(--text-primary);">₹0.00</span>
@@ -187,7 +246,7 @@ function renderQuotations(container) {
                 <span id="summary-transport" style="font-weight: 600; color: var(--text-primary);">₹0.00</span>
               </div>
               <div style="display: flex; justify-content: space-between; gap: 20px;">
-                <span style="color: var(--text-secondary);">GST (18%):</span>
+                <span id="gst-label" style="color: var(--text-secondary);">GST (18%):</span>
                 <span id="summary-gst" style="font-weight: 600; color: var(--text-primary);">₹0.00</span>
               </div>
               <div style="display: flex; justify-content: space-between; gap: 20px; border-top: 1px solid var(--border-glass); padding-top: 6px; font-size: 0.95rem; font-weight: 700; color: var(--accent-color);">
@@ -201,13 +260,14 @@ function renderQuotations(container) {
     `;
 
     showModal('Generate Sales Quotation', formHtml, (formEl, exportAfterSave) => {
-      // Collect items
+      // Collect items — all rows are included, no field is mandatory
       const items = [];
       formEl.querySelectorAll('.item-row').forEach(row => {
         const nameVal = row.querySelector('.item-name').value.trim();
-        if (nameVal) {
-          const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
-          const price = parseFloat(row.querySelector('.item-price').value) || 0;
+        const qty = parseFloat(row.querySelector('.item-qty').value) || 0;
+        const price = parseFloat(row.querySelector('.item-price').value) || 0;
+        // Include row if at least one field has a value
+        if (nameVal || qty || price || row.querySelector('.item-desc').value.trim() || row.querySelector('.item-size').value.trim()) {
           items.push({
             name: nameVal,
             description: row.querySelector('.item-desc').value.trim(),
@@ -220,15 +280,14 @@ function renderQuotations(container) {
         }
       });
 
-      if (items.length === 0) {
-        alert('Please add at least one line item with a valid name.');
-        return false;
-      }
-
       // Calculations
       const subtotal = items.reduce((sum, it) => sum + it.amount, 0);
       const transport = parseFloat(formEl.querySelector('#quote-transport').value) || 0;
-      const gst = (subtotal + transport) * 0.18;
+      const gstSelectVal = formEl.querySelector('#quote-gst-select').value;
+      const gstRate = gstSelectVal === 'custom'
+        ? (parseFloat(formEl.querySelector('#quote-gst-custom').value) || 0) / 100
+        : parseFloat(gstSelectVal) / 100;
+      const gst = (subtotal + transport) * gstRate;
       const grandTotal = subtotal + transport + gst;
 
       // Customer name default fallback
@@ -245,9 +304,10 @@ function renderQuotations(container) {
         status: formEl.querySelector('#quote-status').value,
         validity: formEl.querySelector('#quote-validity').value,
         date: today,
-        amount: grandTotal, // Grand Total is quotation value
+        amount: grandTotal,
         items: items,
-        transportCharges: transport
+        transportCharges: transport,
+        gstRate: gstRate  // store chosen rate (e.g. 0, 0.05, 0.12, 0.18, 0.28)
       };
 
       const newQuote = dbState.createQuotation(payload);
@@ -768,22 +828,22 @@ function setupQuotationFormInteractions(modalOverlay, defaultValidity) {
     tr.style.borderBottom = '1px solid rgba(255, 255, 255, 0.05)';
     tr.innerHTML = `
       <td style="padding: 6px 4px;">
-        <input type="text" class="form-control item-name" style="padding: 4px 6px; font-size: 0.8rem;" placeholder="e.g. Glass Sheet" required>
+        <input type="text" class="form-control item-name" style="padding: 4px 6px; font-size: 0.8rem; color: var(--text-primary); background: var(--input-bg);" placeholder="e.g. Glass Sheet">
       </td>
       <td style="padding: 6px 4px;">
-        <input type="text" class="form-control item-desc" style="padding: 4px 6px; font-size: 0.8rem;" placeholder="e.g. Clear float">
+        <input type="text" class="form-control item-desc" style="padding: 4px 6px; font-size: 0.8rem; color: var(--text-primary); background: var(--input-bg);" placeholder="e.g. Clear float">
       </td>
       <td style="padding: 6px 4px;">
-        <input type="text" class="form-control item-size" style="padding: 4px 6px; font-size: 0.8rem;" placeholder="e.g. 10x12">
+        <input type="text" class="form-control item-size" style="padding: 4px 6px; font-size: 0.8rem; color: var(--text-primary); background: var(--input-bg);" placeholder="e.g. 10x12">
       </td>
       <td style="padding: 6px 4px;">
-        <input type="number" class="form-control item-qty" style="padding: 4px 6px; font-size: 0.8rem;" min="1" value="1" required>
+        <input type="number" class="form-control item-qty" style="padding: 4px 6px; font-size: 0.8rem; color: var(--text-primary); background: var(--input-bg);" min="0" value="" placeholder="0">
       </td>
       <td style="padding: 6px 4px;">
-        <input type="text" class="form-control item-unit" style="padding: 4px 6px; font-size: 0.8rem;" placeholder="e.g. Sft" value="Sft">
+        <input type="text" class="form-control item-unit" style="padding: 4px 6px; font-size: 0.8rem; color: var(--text-primary); background: var(--input-bg);" placeholder="e.g. Sft">
       </td>
       <td style="padding: 6px 4px;">
-        <input type="number" step="0.01" class="form-control item-price" style="padding: 4px 6px; font-size: 0.8rem;" placeholder="0.00" required>
+        <input type="number" step="0.01" class="form-control item-price" style="padding: 4px 6px; font-size: 0.8rem; color: var(--text-primary); background: var(--input-bg);" placeholder="0.00">
       </td>
       <td style="padding: 6px 4px; text-align: right; font-weight: 600; color: var(--text-primary);" class="item-amount">
         ₹0.00
@@ -820,6 +880,22 @@ function setupQuotationFormInteractions(modalOverlay, defaultValidity) {
     transportInput.addEventListener('input', () => recalculateQuotationTotals(modalOverlay));
   }
 
+  // GST selector: show/hide custom input and recalculate
+  const gstSelectEl = modalOverlay.querySelector('#quote-gst-select');
+  const gstCustomEl = modalOverlay.querySelector('#quote-gst-custom');
+  if (gstSelectEl) {
+    gstSelectEl.addEventListener('change', () => {
+      if (gstCustomEl) {
+        gstCustomEl.style.display = gstSelectEl.value === 'custom' ? 'inline-block' : 'none';
+        if (gstSelectEl.value === 'custom') gstCustomEl.focus();
+      }
+      recalculateQuotationTotals(modalOverlay);
+    });
+  }
+  if (gstCustomEl) {
+    gstCustomEl.addEventListener('input', () => recalculateQuotationTotals(modalOverlay));
+  }
+
   addRow();
 }
 
@@ -835,13 +911,32 @@ function recalculateQuotationTotals(modalEl) {
   });
 
   const transport = parseFloat(modalEl.querySelector('#quote-transport').value) || 0;
-  const gst = (subtotal + transport) * 0.18;
+
+  // Read selected GST rate
+  const gstSelectEl = modalEl.querySelector('#quote-gst-select');
+  const gstCustomEl = modalEl.querySelector('#quote-gst-custom');
+  let gstRate = 0.18; // default
+  if (gstSelectEl) {
+    const val = gstSelectEl.value;
+    gstRate = val === 'custom'
+      ? (parseFloat(gstCustomEl ? gstCustomEl.value : 0) || 0) / 100
+      : parseFloat(val) / 100;
+  }
+
+  const gst = (subtotal + transport) * gstRate;
   const grandTotal = subtotal + transport + gst;
 
   modalEl.querySelector('#summary-subtotal').textContent = inrFormat.format(subtotal);
   modalEl.querySelector('#summary-transport').textContent = inrFormat.format(transport);
   modalEl.querySelector('#summary-gst').textContent = inrFormat.format(gst);
   modalEl.querySelector('#summary-total').textContent = inrFormat.format(grandTotal);
+
+  // Update the GST label to reflect selected rate
+  const gstLabelEl = modalEl.querySelector('#gst-label');
+  if (gstLabelEl) {
+    const pct = Math.round(gstRate * 100);
+    gstLabelEl.textContent = pct > 0 ? `GST (${pct}%):` : 'GST (None):';
+  }
 
   return { subtotal, transport, gst, grandTotal };
 }
@@ -883,11 +978,14 @@ function convertNumberToWords(num) {
 function showQuotationInvoiceModal(quote) {
   const settings = dbState.state.settings;
   
+  // Use saved GST rate from quote, default to 0 if not set (no mandatory GST)
+  const savedGstRate = (quote.gstRate !== undefined && quote.gstRate !== null) ? quote.gstRate : 0.18;
   const subtotal = quote.items ? quote.items.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0) : quote.amount;
   const transport = parseFloat(quote.transportCharges) || 0;
   const taxableSum = subtotal + transport;
-  const totalTax = taxableSum * 0.18;
+  const totalTax = taxableSum * savedGstRate;
   const grandTotal = taxableSum + totalTax;
+  const gstPct = Math.round(savedGstRate * 100);
 
   const amountInWords = convertNumberToWords(grandTotal);
 
@@ -896,16 +994,16 @@ function showQuotationInvoiceModal(quote) {
     quote.items.forEach((item, index) => {
       itemsHtml += `
         <tr style="border-bottom: 1px solid #e5e7eb;">
-          <td style="padding: 8px 6px; border: 1px solid #e5e7eb; text-align: center;">${index + 1}</td>
+          <td style="padding: 8px 6px; border: 1px solid #e5e7eb; text-align: center; color: #111827; font-weight: 600;">${index + 1}</td>
           <td style="padding: 8px 6px; border: 1px solid #e5e7eb;">
-            <div style="font-weight: 700; color: #111827;">${item.name}</div>
-            ${item.description ? `<div style="font-size: 0.75rem; color: #4b5563; margin-top: 2px;">${item.description}</div>` : ''}
+            <div style="font-weight: 700; color: #111827;">${item.name || '—'}</div>
+            ${item.description ? `<div style="font-size: 0.75rem; color: #374151; margin-top: 2px;">${item.description}</div>` : ''}
           </td>
-          <td style="padding: 8px 6px; border: 1px solid #e5e7eb; text-align: center;">${item.size || 'N/A'}</td>
-          <td style="padding: 8px 6px; border: 1px solid #e5e7eb; text-align: center;">${item.quantity}</td>
-          <td style="padding: 8px 6px; border: 1px solid #e5e7eb; text-align: center;">${item.unit || 'units'}</td>
-          <td style="padding: 8px 6px; border: 1px solid #e5e7eb; text-align: right;">${inrFormat.format(item.price)}</td>
-          <td style="padding: 8px 6px; border: 1px solid #e5e7eb; text-align: right; font-weight: 600;">${inrFormat.format(item.amount)}</td>
+          <td style="padding: 8px 6px; border: 1px solid #e5e7eb; text-align: center; color: #111827; font-weight: 600;">${item.size || '—'}</td>
+          <td style="padding: 8px 6px; border: 1px solid #e5e7eb; text-align: center; color: #111827; font-weight: 600;">${item.quantity || '—'}</td>
+          <td style="padding: 8px 6px; border: 1px solid #e5e7eb; text-align: center; color: #111827; font-weight: 600;">${item.unit || 'units'}</td>
+          <td style="padding: 8px 6px; border: 1px solid #e5e7eb; text-align: right; color: #111827; font-weight: 600;">${inrFormat.format(item.price)}</td>
+          <td style="padding: 8px 6px; border: 1px solid #e5e7eb; text-align: right; color: #111827; font-weight: 700;">${inrFormat.format(item.amount)}</td>
         </tr>
       `;
     });
@@ -928,22 +1026,30 @@ function showQuotationInvoiceModal(quote) {
 
   const isLocal = !quote.clientState || quote.clientState === settings.gstStateCode;
   let taxRowsHtml = '';
-  if (isLocal) {
+  if (gstPct === 0) {
+    taxRowsHtml = `
+      <tr style="border-bottom: 1px solid #e5e7eb;">
+        <td style="padding: 7px 4px; color: #4b5563;">GST:</td>
+        <td style="padding: 7px 4px; text-align: right; color: #111827;">Not Applicable (0%)</td>
+      </tr>
+    `;
+  } else if (isLocal) {
+    const halfPct = gstPct / 2;
     const halfTax = totalTax / 2;
     taxRowsHtml = `
       <tr style="border-bottom: 1px solid #e5e7eb;">
-        <td style="padding: 7px 4px; color: #4b5563;">CGST (9%):</td>
+        <td style="padding: 7px 4px; color: #4b5563;">CGST (${halfPct}%):</td>
         <td style="padding: 7px 4px; text-align: right; color: #111827;">${inrFormat.format(halfTax)}</td>
       </tr>
       <tr style="border-bottom: 1px solid #e5e7eb;">
-        <td style="padding: 7px 4px; color: #4b5563;">SGST (9%):</td>
+        <td style="padding: 7px 4px; color: #4b5563;">SGST (${halfPct}%):</td>
         <td style="padding: 7px 4px; text-align: right; color: #111827;">${inrFormat.format(halfTax)}</td>
       </tr>
     `;
   } else {
     taxRowsHtml = `
       <tr style="border-bottom: 1px solid #e5e7eb;">
-        <td style="padding: 7px 4px; color: #4b5563;">IGST (18%):</td>
+        <td style="padding: 7px 4px; color: #4b5563;">IGST (${gstPct}%):</td>
         <td style="padding: 7px 4px; text-align: right; color: #111827;">${inrFormat.format(totalTax)}</td>
       </tr>
     `;
@@ -981,11 +1087,11 @@ function showQuotationInvoiceModal(quote) {
           <!-- Brand Header -->
           <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 3px solid #2563eb; padding-bottom: 18px; margin-bottom: 22px;">
             <div style="display: flex; align-items: center; gap: 14px;">
-              <div style="width: 55px; height: 55px; background: #2563eb; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 4px 10px rgba(37,99,235,0.2);">
-                <svg width="34" height="34" viewBox="0 0 100 100">
-                  <circle cx="50" cy="45" r="18" fill="none" stroke="#ffffff" stroke-width="9"/>
-                  <path d="M68,27 L68,65 C68,78 57,88 44,88 C34,88 27,82 25,74" fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round"/>
-                </svg>
+              <div style="width: 70px; height: 70px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; overflow: hidden; ${settings.companyLogo ? 'border: 1px solid #e5e7eb; background: #fff; padding: 4px;' : 'background: #2563eb; box-shadow: 0 4px 10px rgba(37,99,235,0.2);'}">
+                ${settings.companyLogo
+                  ? `<img src="${settings.companyLogo}" alt="Logo" style="width:100%; height:100%; object-fit:contain;">`
+                  : `<svg width="34" height="34" viewBox="0 0 100 100"><circle cx="50" cy="45" r="18" fill="none" stroke="#ffffff" stroke-width="9"/><path d="M68,27 L68,65 C68,78 57,88 44,88 C34,88 27,82 25,74" fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round"/></svg>`
+                }
               </div>
               <div>
                 <h2 style="font-size: 1.65rem; font-weight: 800; color: #111827; margin: 0; letter-spacing: 0.04em; font-family: 'Outfit', sans-serif;">${settings.companyName || 'GLASSOLOGY'}</h2>

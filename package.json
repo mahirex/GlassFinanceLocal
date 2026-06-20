@@ -12,6 +12,7 @@
     "vite": "^5.2.11"
   },
   "dependencies": {
+    "@duckdb/duckdb-wasm": "^1.33.1-dev45.0",
     "@libsql/client": "^0.17.3",
     "@supabase/supabase-js": "^2.108.1"
   }

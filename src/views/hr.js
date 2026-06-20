@@ -76,7 +76,7 @@ function renderEmployeeDirectory(container) {
     headers: headers,
     data: state.employees,
     onRowClick: (row) => {
-      renderEmployeeProfile(container.querySelector('#employee-profile-mount'), row);
+      renderEmployeeProfile(container.querySelector('#employee-profile-mount'), row, container);
     },
     onDeleteSelected: (selectedRows) => {
       const ids = selectedRows.map(row => row.employee_id);
@@ -143,12 +143,12 @@ function renderEmployeeDirectory(container) {
         
         <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
           <div class="form-group">
-            <label for="emp-email">Email Address *</label>
-            <input type="email" id="emp-email" class="form-control" placeholder="rohan@glasserp.in" required>
+            <label for="emp-email">Email Address</label>
+            <input type="email" id="emp-email" class="form-control" placeholder="rohan@glasserp.in">
           </div>
           <div class="form-group">
-            <label for="emp-mobile">Mobile Number *</label>
-            <input type="tel" id="emp-mobile" class="form-control" placeholder="9820012345" required>
+            <label for="emp-mobile">Mobile Number</label>
+            <input type="tel" id="emp-mobile" class="form-control" placeholder="9820012345">
           </div>
         </div>
 
@@ -159,12 +159,12 @@ function renderEmployeeDirectory(container) {
 
         <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
           <div class="form-group">
-            <label for="emp-pan">PAN (Tax ID) *</label>
-            <input type="text" id="emp-pan" class="form-control" placeholder="ABCDE1234F" style="text-transform: uppercase;" required>
+            <label for="emp-pan">PAN (Tax ID)</label>
+            <input type="text" id="emp-pan" class="form-control" placeholder="ABCDE1234F" style="text-transform: uppercase;">
           </div>
           <div class="form-group">
-            <label for="emp-aadhaar">Aadhaar Status *</label>
-            <select id="emp-aadhaar" required>
+            <label for="emp-aadhaar">Aadhaar Status</label>
+            <select id="emp-aadhaar">
               <option value="Verified (Physical Check)">Verified (Physical Check)</option>
               <option value="Pending Check">Pending Physical verification</option>
               <option value="Not Provided">Not Provided</option>
@@ -174,12 +174,12 @@ function renderEmployeeDirectory(container) {
 
         <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px;">
           <div class="form-group">
-            <label for="emp-designation">Designation *</label>
-            <input type="text" id="emp-designation" class="form-control" placeholder="Structural Engineer" required>
+            <label for="emp-designation">Designation</label>
+            <input type="text" id="emp-designation" class="form-control" placeholder="Structural Engineer">
           </div>
           <div class="form-group">
-            <label for="emp-salary-type">Salary Type *</label>
-            <select id="emp-salary-type" required>
+            <label for="emp-salary-type">Salary Type</label>
+            <select id="emp-salary-type">
               <option value="Monthly">Monthly Salary</option>
               <option value="Weekly">Weekly Wage</option>
               <option value="Daily Wage">Daily Wage</option>
@@ -190,12 +190,27 @@ function renderEmployeeDirectory(container) {
 
         <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px;">
           <div class="form-group">
-            <label for="emp-salary-amt">Base Salary / Wage (₹) *</label>
-            <input type="number" id="emp-salary-amt" class="form-control" placeholder="75,000" required>
+            <label for="emp-salary-amt">Base Salary / Wage (₹)</label>
+            <input type="number" id="emp-salary-amt" class="form-control" placeholder="75,000">
           </div>
           <div class="form-group">
-            <label for="emp-join">Joining Date *</label>
-            <input type="date" id="emp-join" class="form-control" value="${today}" required>
+            <label for="emp-join">Joining Date</label>
+            <input type="date" id="emp-join" class="form-control" value="${today}">
+          </div>
+        </div>
+
+        <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 15px;">
+          <div class="form-group">
+            <label for="emp-bank-name">Bank Name</label>
+            <input type="text" id="emp-bank-name" class="form-control" placeholder="HDFC Bank">
+          </div>
+          <div class="form-group">
+            <label for="emp-account-number">Account Number</label>
+            <input type="text" id="emp-account-number" class="form-control" placeholder="50100293849102">
+          </div>
+          <div class="form-group">
+            <label for="emp-ifsc-code">IFSC Code</label>
+            <input type="text" id="emp-ifsc-code" class="form-control" placeholder="HDFC0000104">
           </div>
         </div>
 
@@ -219,8 +234,11 @@ function renderEmployeeDirectory(container) {
           aadhaar_status: formEl.querySelector('#emp-aadhaar').value,
           designation: formEl.querySelector('#emp-designation').value,
           salary_type: formEl.querySelector('#emp-salary-type').value,
-          base_salary: parseFloat(formEl.querySelector('#emp-salary-amt').value),
-          joining_date: formEl.querySelector('#emp-join').value
+          base_salary: parseFloat(formEl.querySelector('#emp-salary-amt').value || 0),
+          joining_date: formEl.querySelector('#emp-join').value || today,
+          bank_name: formEl.querySelector('#emp-bank-name').value,
+          account_number: formEl.querySelector('#emp-account-number').value,
+          ifsc_code: formEl.querySelector('#emp-ifsc-code').value
         };
 
         // Collect custom fields values
@@ -393,17 +411,24 @@ function renderEmployeeDirectory(container) {
 }
 
 // 2. TABBED EMPLOYEE PROFILE WORKSPACE
-function renderEmployeeProfile(mount, employee) {
+function renderEmployeeProfile(mount, employee, container) {
   mount.innerHTML = `
     <div style="width: 100%;">
       <!-- Profile Header Summary -->
-      <div style="display: flex; gap: 20px; align-items: center; margin-bottom: 25px; border-bottom: 1px solid var(--border-glass); padding-bottom: 20px;">
-        <div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #a855f7, #6366f1); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 700; color: #fff; font-family: var(--font-heading);">
-          ${employee.name.split(' ').map(n => n[0]).join('')}
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; border-bottom: 1px solid var(--border-glass); padding-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+        <div style="display: flex; gap: 20px; align-items: center;">
+          <div style="width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #a855f7, #6366f1); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 700; color: #fff; font-family: var(--font-heading);">
+            ${employee.name.split(' ').map(n => n[0]).join('')}
+          </div>
+          <div>
+            <h3 style="font-family: var(--font-heading); font-size: 1.35rem; font-weight: 700; color: var(--text-primary);">${employee.name}</h3>
+            <p style="font-size: 0.85rem; color: var(--text-secondary);">${employee.designation} | ID: <span style="font-family: monospace; color: var(--accent-color); font-weight: 700;">${employee.employee_id}</span></p>
+          </div>
         </div>
         <div>
-          <h3 style="font-family: var(--font-heading); font-size: 1.35rem; font-weight: 700; color: var(--text-primary);">${employee.name}</h3>
-          <p style="font-size: 0.85rem; color: var(--text-secondary);">${employee.designation} | ID: <span style="font-family: monospace; color: var(--accent-color); font-weight: 700;">${employee.employee_id}</span></p>
+          <button type="button" class="btn btn-secondary" id="btn-edit-employee" style="padding: 6px 12px; font-size: 0.8rem;">
+            <i data-lucide="edit" style="width: 14px; height: 14px; margin-right: 4px; vertical-align: middle;"></i> Edit Details
+          </button>
         </div>
       </div>
 
@@ -441,6 +466,150 @@ function renderEmployeeProfile(mount, employee) {
   tabLedger.addEventListener('click', () => setProfileTab(tabLedger, renderProfileLedger));
   tabAdvances.addEventListener('click', () => setProfileTab(tabAdvances, renderProfileAdvances));
   tabDocs.addEventListener('click', () => setProfileTab(tabDocs, renderProfileDocs));
+
+  // Edit employee details event listener
+  const btnEdit = mount.querySelector('#btn-edit-employee');
+  if (btnEdit) {
+    btnEdit.addEventListener('click', () => {
+      const state = dbState.state;
+      const headers = state.settings.employeeColumns;
+      const standardKeys = ['name', 'employee_id', 'designation', 'email', 'mobile', 'address', 'pan', 'aadhaar_status', 'joining_date', 'salary_type', 'base_salary'];
+
+      // Build custom fields inputs dynamically prefilled
+      let customFieldsHtml = '';
+      headers.forEach(col => {
+        if (!standardKeys.includes(col.key)) {
+          customFieldsHtml += `
+            <div class="form-group" style="margin-bottom: 12px;">
+              <label for="emp-custom-${col.key}">${col.label}</label>
+              <input type="text" id="emp-custom-${col.key}" class="form-control" placeholder="Enter ${col.label}" value="${employee[col.key] || ''}">
+            </div>
+          `;
+        }
+      });
+
+      const formHtml = `
+        <div style="text-align: left;">
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label for="emp-name">Full Name *</label>
+            <input type="text" id="emp-name" class="form-control" placeholder="Rohan Sharma" value="${employee.name}" required>
+          </div>
+          
+          <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div class="form-group">
+              <label for="emp-email">Email Address</label>
+              <input type="email" id="emp-email" class="form-control" placeholder="rohan@glasserp.in" value="${employee.email || ''}">
+            </div>
+            <div class="form-group">
+              <label for="emp-mobile">Mobile Number</label>
+              <input type="tel" id="emp-mobile" class="form-control" placeholder="9820012345" value="${employee.mobile || ''}">
+            </div>
+          </div>
+
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label for="emp-address">Residential Address</label>
+            <input type="text" id="emp-address" class="form-control" placeholder="Flat No, Wing, Area, City" value="${employee.address || ''}">
+          </div>
+
+          <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+            <div class="form-group">
+              <label for="emp-pan">PAN (Tax ID)</label>
+              <input type="text" id="emp-pan" class="form-control" placeholder="ABCDE1234F" style="text-transform: uppercase;" value="${employee.pan || ''}">
+            </div>
+            <div class="form-group">
+              <label for="emp-aadhaar">Aadhaar Status</label>
+              <select id="emp-aadhaar">
+                <option value="Verified (Physical Check)" ${employee.aadhaar_status === 'Verified (Physical Check)' ? 'selected' : ''}>Verified (Physical Check)</option>
+                <option value="Pending Check" ${employee.aadhaar_status === 'Pending Check' ? 'selected' : ''}>Pending Physical verification</option>
+                <option value="Not Provided" ${employee.aadhaar_status === 'Not Provided' ? 'selected' : ''}>Not Provided</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px;">
+            <div class="form-group">
+              <label for="emp-designation">Designation</label>
+              <input type="text" id="emp-designation" class="form-control" placeholder="Structural Engineer" value="${employee.designation || ''}">
+            </div>
+            <div class="form-group">
+              <label for="emp-salary-type">Salary Type</label>
+              <select id="emp-salary-type">
+                <option value="Monthly" ${employee.salary_type === 'Monthly' ? 'selected' : ''}>Monthly Salary</option>
+                <option value="Weekly" ${employee.salary_type === 'Weekly' ? 'selected' : ''}>Weekly Wage</option>
+                <option value="Daily Wage" ${employee.salary_type === 'Daily Wage' ? 'selected' : ''}>Daily Wage</option>
+                <option value="Contract" ${employee.salary_type === 'Contract' ? 'selected' : ''}>Contractual Basis</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px;">
+            <div class="form-group">
+              <label for="emp-salary-amt">Base Salary / Wage (₹)</label>
+              <input type="number" id="emp-salary-amt" class="form-control" placeholder="75,000" value="${employee.base_salary || 0}">
+            </div>
+            <div class="form-group">
+              <label for="emp-join">Joining Date</label>
+              <input type="date" id="emp-join" class="form-control" value="${employee.joining_date || ''}">
+            </div>
+          </div>
+
+          <div class="form-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 15px;">
+            <div class="form-group">
+              <label for="emp-bank-name">Bank Name</label>
+              <input type="text" id="emp-bank-name" class="form-control" placeholder="HDFC Bank" value="${employee.bank_name || ''}">
+            </div>
+            <div class="form-group">
+              <label for="emp-account-number">Account Number</label>
+              <input type="text" id="emp-account-number" class="form-control" placeholder="50100293849102" value="${employee.account_number || ''}">
+            </div>
+            <div class="form-group">
+              <label for="emp-ifsc-code">IFSC Code</label>
+              <input type="text" id="emp-ifsc-code" class="form-control" placeholder="HDFC0000104" value="${employee.ifsc_code || ''}">
+            </div>
+          </div>
+
+          <!-- Custom Fields Section -->
+          ${customFieldsHtml}
+        </div>
+      `;
+
+      showModal('Edit Employee Details', formHtml, (formEl) => {
+        try {
+          const payload = {
+            name: formEl.querySelector('#emp-name').value,
+            email: formEl.querySelector('#emp-email').value,
+            mobile: formEl.querySelector('#emp-mobile').value,
+            address: formEl.querySelector('#emp-address').value,
+            pan: formEl.querySelector('#emp-pan').value,
+            aadhaar_status: formEl.querySelector('#emp-aadhaar').value,
+            designation: formEl.querySelector('#emp-designation').value,
+            salary_type: formEl.querySelector('#emp-salary-type').value,
+            base_salary: parseFloat(formEl.querySelector('#emp-salary-amt').value || 0),
+            joining_date: formEl.querySelector('#emp-join').value,
+            bank_name: formEl.querySelector('#emp-bank-name').value,
+            account_number: formEl.querySelector('#emp-account-number').value,
+            ifsc_code: formEl.querySelector('#emp-ifsc-code').value
+          };
+
+          // Collect custom fields values
+          headers.forEach(col => {
+            if (!standardKeys.includes(col.key)) {
+              const inputVal = formEl.querySelector(`#emp-custom-${col.key}`)?.value || '';
+              payload[col.key] = inputVal;
+            }
+          });
+
+          const updated = dbState.updateEmployee(employee.employee_id, payload);
+          renderEmployeeDirectory(container);
+          renderEmployeeProfile(container.querySelector('#employee-profile-mount'), updated, container);
+          return true;
+        } catch (err) {
+          alert(err.message);
+          return false;
+        }
+      });
+    });
+  }
 
   // Load Overview by default
   renderProfileOverview(tabMount, employee);
@@ -521,6 +690,14 @@ function renderProfileOverview(mount, employee) {
             <span style="color: var(--text-secondary);">Aadhaar Compliance Status:</span>
             <span class="badge badge-debit" style="font-size: 0.7rem;">${employee.aadhaar_status}</span>
           </div>
+
+          <!-- Salary & Bank Details -->
+          <div style="display: flex; justify-content: space-between; border-top: 1px dashed var(--border-glass); padding-top: 8px; margin-top: 5px;">
+            <span style="color: var(--text-secondary); font-weight: 700; text-transform: uppercase; font-size: 0.75rem;">Salary & Bank Details</span>
+          </div>
+          <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Bank Name:</span><strong>${employee.bank_name || 'N/A'}</strong></div>
+          <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">Account Number:</span><strong style="font-family: monospace;">${employee.account_number || 'N/A'}</strong></div>
+          <div style="display: flex; justify-content: space-between;"><span style="color: var(--text-secondary);">IFSC Code:</span><strong style="font-family: monospace;">${employee.ifsc_code || 'N/A'}</strong></div>
         </div>
       </div>
     </div>
