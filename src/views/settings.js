@@ -579,7 +579,7 @@ export function renderSettings(container) {
         alert(`Successfully linked workspace to your computer folder: "${handle.name}"`);
         
         // Execute initial save
-        await syncDataToOfflineFileStorage(state.systemLogs);
+        await syncDataToOfflineFileStorage(state.systemLogs, state.inventory);
         
         const timeString = localStorage.getItem('duckdb_last_sync_timestamp') || new Date().toLocaleTimeString();
         container.querySelector('#lbl-sync-time').textContent = timeString;

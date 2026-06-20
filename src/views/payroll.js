@@ -26,8 +26,35 @@ function countPresentDays(employee) {
   return present;
 }
 
+function calculateDefaultEntry(emp) {
+  const presentDays = countPresentDays(emp);
+  let perDayRate = 0;
+  if (emp.salary_type === 'Daily Wage') {
+    perDayRate = emp.base_salary;
+  } else if (emp.salary_type === 'Weekly') {
+    perDayRate = emp.base_salary / 6;
+  } else {
+    perDayRate = emp.base_salary / 30;
+  }
+  perDayRate = round(perDayRate);
+
+  const advanceTaken = emp.advance_due || 0;
+  const pf = 0;
+  const finalSalary = Math.max(0, round((presentDays * perDayRate) - advanceTaken - pf));
+
+  return {
+    employee_id: emp.employee_id,
+    present_days: presentDays,
+    per_day_salary: perDayRate,
+    advance_taken: advanceTaken,
+    pf: pf,
+    final_salary: finalSalary
+  };
+}
+
 export function renderPayrollCalculator(container) {
   const state = dbState.state;
+  if (!state.payrollSheet) state.payrollSheet = [];
 
   container.innerHTML = `
     <div style="display: flex; flex-direction: column; gap: 24px;">
@@ -70,67 +97,27 @@ export function renderPayrollCalculator(container) {
     </div>
   `;
 
-  // Pre-seed or ensure payroll entries for all employees
-  const ensurePayrollSheetInitialized = (forceRecalculate = false) => {
-    if (!state.payrollSheet) state.payrollSheet = [];
-
-    state.employees.forEach(emp => {
-      let entry = state.payrollSheet.find(p => p.employee_id === emp.employee_id);
-      if (!entry || forceRecalculate) {
-        const presentDays = countPresentDays(emp);
-        
-        let perDayRate = 0;
-        if (emp.salary_type === 'Daily Wage') {
-          perDayRate = emp.base_salary;
-        } else if (emp.salary_type === 'Weekly') {
-          perDayRate = emp.base_salary / 6;
-        } else {
-          perDayRate = emp.base_salary / 30;
-        }
-        perDayRate = round(perDayRate);
-
-        const advanceTaken = emp.advance_due || 0;
-        const pf = entry ? (entry.pf || 0) : 0;
-        const finalSalary = Math.max(0, round((presentDays * perDayRate) - advanceTaken - pf));
-
-        if (!entry) {
-          entry = {
-            employee_id: emp.employee_id,
-            present_days: presentDays,
-            per_day_salary: perDayRate,
-            advance_taken: advanceTaken,
-            pf: pf,
-            final_salary: finalSalary
-          };
-          state.payrollSheet.push(entry);
-        } else {
-          entry.present_days = presentDays;
-          entry.per_day_salary = perDayRate;
-          entry.advance_taken = advanceTaken;
-          entry.pf = pf;
-          entry.final_salary = finalSalary;
-        }
-      }
-    });
-
-    dbState.saveState();
-  };
-
-  ensurePayrollSheetInitialized();
-
-  // Populate data items for Table
+  // Populate data items for Table dynamically without calling saveState() in render path
   const getTableData = () => {
     return state.employees.map(emp => {
-      const entry = state.payrollSheet.find(p => p.employee_id === emp.employee_id) || {};
-      return {
-        employee_id: emp.employee_id,
-        name: emp.name,
-        present_days: entry.present_days ?? countPresentDays(emp),
-        per_day_salary: entry.per_day_salary ?? 0,
-        advance_taken: entry.advance_taken ?? 0,
-        pf: entry.pf ?? 0,
-        final_salary: entry.final_salary ?? 0
-      };
+      const entry = state.payrollSheet.find(p => p.employee_id === emp.employee_id);
+      if (entry) {
+        return {
+          employee_id: emp.employee_id,
+          name: emp.name,
+          present_days: entry.present_days ?? countPresentDays(emp),
+          per_day_salary: entry.per_day_salary ?? 0,
+          advance_taken: entry.advance_taken ?? 0,
+          pf: entry.pf ?? 0,
+          final_salary: entry.final_salary ?? 0
+        };
+      } else {
+        const defaults = calculateDefaultEntry(emp);
+        return {
+          ...defaults,
+          name: emp.name
+        };
+      }
     });
   };
 
@@ -189,8 +176,7 @@ export function renderPayrollCalculator(container) {
 
     let entry = state.payrollSheet.find(p => p.employee_id === employeeId);
     if (!entry) {
-      ensurePayrollSheetInitialized();
-      entry = state.payrollSheet.find(p => p.employee_id === employeeId);
+      entry = calculateDefaultEntry(emp);
     }
 
     const formHtml = `
@@ -284,10 +270,11 @@ export function renderPayrollCalculator(container) {
     }, 50);
   };
 
-  // Wire up action buttons
+  // Recalculate all Action (updates database state asynchronously upon explicit user confirmation)
   container.querySelector('#btn-recalculate-all').addEventListener('click', () => {
     if (confirm("Are you sure you want to recalculate payroll for all employees? This will reset custom overrides with dynamic attendance values and active advance balances.")) {
-      ensurePayrollSheetInitialized(true);
+      const entries = state.employees.map(emp => calculateDefaultEntry(emp));
+      dbState.updatePayrollBatch(entries);
       table.setData(getTableData());
       attachRowEventListeners();
     }

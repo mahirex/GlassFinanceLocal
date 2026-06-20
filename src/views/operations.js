@@ -359,6 +359,21 @@ function renderInventory(container) {
       return isLow 
         ? `<span class="badge badge-credit"><i data-lucide="alert-circle" style="width: 10px; height: 10px; vertical-align: middle; margin-right: 4px;"></i> Low Stock Reorder</span>`
         : `<span class="badge badge-debit">Optimal Stock</span>`;
+    }},
+    { key: 'id', label: 'Stock Actions', render: (val, row) => {
+      return `
+        <div style="display: flex; gap: 8px; align-items: center;" class="stock-action-buttons">
+          <button class="btn btn-secondary btn-stock-in" data-id="${val}" style="padding: 4px 8px; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; background: rgba(16, 185, 129, 0.1); color: var(--debit-color); border: 1px solid rgba(16, 185, 129, 0.2); cursor: pointer;">
+            <i data-lucide="circle-plus" style="width: 12px; height: 12px;"></i> Stock In
+          </button>
+          <button class="btn btn-secondary btn-stock-out" data-id="${val}" style="padding: 4px 8px; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; background: rgba(239, 68, 68, 0.1); color: var(--credit-color); border: 1px solid rgba(239, 68, 68, 0.2); cursor: pointer;">
+            <i data-lucide="circle-minus" style="width: 12px; height: 12px;"></i> Stock Out
+          </button>
+          <button class="btn btn-secondary btn-stock-history" data-id="${val}" style="padding: 4px 8px; font-size: 0.75rem; display: inline-flex; align-items: center; gap: 4px; background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2); cursor: pointer;">
+            <i data-lucide="history" style="width: 12px; height: 12px;"></i> History
+          </button>
+        </div>
+      `;
     }}
   ];
 
@@ -377,6 +392,28 @@ function renderInventory(container) {
         });
       });
       table.setData(dbState.inventory);
+    }
+  });
+
+  // Event delegation for stock actions inside the table
+  const tableMount = container.querySelector('#inventory-table-mount');
+  tableMount.addEventListener('click', (e) => {
+    const btnIn = e.target.closest('.btn-stock-in');
+    const btnOut = e.target.closest('.btn-stock-out');
+    const btnHistory = e.target.closest('.btn-stock-history');
+
+    if (btnIn) {
+      e.stopPropagation();
+      const itemId = btnIn.getAttribute('data-id');
+      showStockAdjustmentModal(itemId, 'IN', table);
+    } else if (btnOut) {
+      e.stopPropagation();
+      const itemId = btnOut.getAttribute('data-id');
+      showStockAdjustmentModal(itemId, 'OUT', table);
+    } else if (btnHistory) {
+      e.stopPropagation();
+      const itemId = btnHistory.getAttribute('data-id');
+      showStockHistoryModal(itemId);
     }
   });
 
@@ -427,6 +464,123 @@ function renderInventory(container) {
   if (window.lucide) {
     window.lucide.createIcons();
   }
+}
+
+// Helpers for Stock In and Out actions
+function showStockAdjustmentModal(itemId, type, table) {
+  const item = dbState.state.inventory.find(i => i.id === itemId);
+  if (!item) return;
+
+  const isStockIn = type === 'IN';
+  const title = `Stock ${isStockIn ? 'In' : 'Out'} Adjustment - ${item.name}`;
+  const formHtml = `
+    <div style="text-align: left;">
+      <div class="form-group" style="margin-bottom: 12px; background: rgba(255,255,255,0.01); padding: 12px; border: 1px solid var(--border-glass); border-radius: var(--border-radius-sm);">
+        <label style="display: block; font-weight: 700; margin-bottom: 4px; color: var(--accent-color);">Material Info</label>
+        <span style="font-size: 0.9rem; color: var(--text-primary); font-weight: 600;">${item.name}</span>
+        <p style="font-size: 0.8rem; color: var(--text-secondary); margin: 4px 0 0 0;">Current Stock: <strong>${item.quantity} ${item.unit}</strong> (Threshold: ${item.threshold} ${item.unit})</p>
+      </div>
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label for="stock-qty">Quantity to ${isStockIn ? 'Add' : 'Remove'} (${item.unit}) *</label>
+        <input type="number" id="stock-qty" class="form-control" placeholder="e.g. 50" min="0.001" step="any" required>
+      </div>
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label for="stock-person">Reference Person / Party Name *</label>
+        <input type="text" id="stock-person" class="form-control" placeholder="e.g. Rohan Sharma / L&T Construction" required>
+      </div>
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label for="stock-details">Details / Reason / Description (Optional)</label>
+        <textarea id="stock-details" class="form-control" style="min-height: 60px; font-family: inherit; font-size: 0.85rem;" rows="2" placeholder="Provide extra context, e.g. Site supervisor request or project release details"></textarea>
+      </div>
+    </div>
+  `;
+
+  showModal(title, formHtml, (formEl) => {
+    const qty = parseFloat(formEl.querySelector('#stock-qty').value);
+    const person = formEl.querySelector('#stock-person').value.trim();
+    const details = formEl.querySelector('#stock-details').value.trim();
+
+    if (isNaN(qty) || qty <= 0) {
+      alert('Please enter a valid quantity greater than zero.');
+      return false;
+    }
+    if (!person) {
+      alert('Please enter a reference person/party.');
+      return false;
+    }
+
+    if (!isStockIn && qty > item.quantity) {
+      if (!confirm(`Warning: You are attempting to remove ${qty} ${item.unit}, but only ${item.quantity} ${item.unit} is available. This will lead to a negative stock level. Do you want to proceed?`)) {
+        return false;
+      }
+    }
+
+    const change = isStockIn ? qty : -qty;
+    dbState.adjustInventoryStock(itemId, change, type, person, details);
+    table.setData(dbState.state.inventory);
+    return true;
+  });
+}
+
+function showStockHistoryModal(itemId) {
+  const item = dbState.state.inventory.find(i => i.id === itemId);
+  if (!item) return;
+
+  const logs = item.logs || [];
+  let logRows = '';
+
+  if (logs.length === 0) {
+    logRows = `
+      <tr>
+        <td colspan="5" style="text-align: center; color: var(--text-muted); padding: 30px;">
+          No adjustments logged yet for this material.
+        </td>
+      </tr>
+    `;
+  } else {
+    // Show newest adjustments first
+    [...logs].reverse().forEach(log => {
+      const formattedDate = new Date(log.timestamp).toLocaleString();
+      const typeBadge = log.type === 'IN' 
+        ? `<span class="badge badge-debit" style="font-size: 0.7rem;"><i data-lucide="circle-plus" style="width: 10px; height: 10px; vertical-align: middle; margin-right: 4px;"></i>Stock In</span>`
+        : `<span class="badge badge-credit" style="font-size: 0.7rem;"><i data-lucide="circle-minus" style="width: 10px; height: 10px; vertical-align: middle; margin-right: 4px;"></i>Stock Out</span>`;
+      
+      logRows += `
+        <tr style="border-bottom: 1px solid var(--border-glass);">
+          <td style="padding: 12px 10px; font-size: 0.8rem; color: var(--text-secondary);">${formattedDate}</td>
+          <td style="padding: 12px 10px;">${typeBadge}</td>
+          <td style="padding: 12px 10px; font-weight: 700;">${log.quantity} ${item.unit}</td>
+          <td style="padding: 12px 10px; font-size: 0.85rem; color: var(--text-primary); font-weight: 600;">${log.person}</td>
+          <td style="padding: 12px 10px; font-size: 0.82rem; color: var(--text-secondary); max-width: 200px; word-wrap: break-word;">${log.details || '—'}</td>
+        </tr>
+      `;
+    });
+  }
+
+  const title = `Stock Adjustments History - ${item.name}`;
+  const tableHtml = `
+    <div style="max-height: 55vh; overflow-y: auto; text-align: left; padding-right: 5px;">
+      <div style="margin-bottom: 12px; font-size: 0.82rem; color: var(--text-secondary);">
+        Viewing stock adjustment transaction ledger for material: <strong>${item.name}</strong>
+      </div>
+      <table style="width: 100%; border-collapse: collapse; min-width: 550px;">
+        <thead>
+          <tr style="border-bottom: 1px solid var(--border-glass); text-align: left; opacity: 0.7; font-size: 0.8rem;">
+            <th style="padding: 8px 10px;">Date & Time</th>
+            <th style="padding: 8px 10px;">Action</th>
+            <th style="padding: 8px 10px;">Qty Adjusted</th>
+            <th style="padding: 8px 10px;">Ref Person/Party</th>
+            <th style="padding: 8px 10px;">Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${logRows}
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  showModal(title, tableHtml, () => true, '750px');
 }
 
 // 3. PRODUCTION & SCHEDULING
@@ -737,6 +891,15 @@ export function showModal(title, bodyHtml, onSave, customWidth = '500px') {
     </div>
   `;
   
+  if (title.includes('History') || title.includes('Log')) {
+    const autofill = overlay.querySelector('.btn-modal-autofill');
+    if (autofill) autofill.style.display = 'none';
+    const saveBtn = overlay.querySelector('.btn-save');
+    if (saveBtn) saveBtn.style.display = 'none';
+    const cancelBtn = overlay.querySelector('.btn-cancel');
+    if (cancelBtn) cancelBtn.textContent = 'Close';
+  }
+
   const close = () => {
     overlay.classList.remove('active');
     setTimeout(() => overlay.remove(), 300);

@@ -5,7 +5,7 @@ import { supabase } from './supabase.js';
 import { turso } from './turso.js';
 
 // Background offline local file mirroring pipeline
-export async function syncDataToOfflineFileStorage(allLogs) {
+export async function syncDataToOfflineFileStorage(allLogs, inventory) {
   if (typeof window === 'undefined' || !window.localDatabaseFolderHandle) return;
   try {
     const targetFolder = window.localDatabaseFolderHandle;
@@ -25,6 +25,51 @@ export async function syncDataToOfflineFileStorage(allLogs) {
     await writableStream.write(payloadFileString);
     await writableStream.close();
     console.log("Automatically mirrored active records securely to selected local storage directory.");
+
+    // Mirror inventory stock log to a dedicated CSV file
+    if (inventory && Array.isArray(inventory)) {
+      const inventoryLogs = [];
+      inventory.forEach(item => {
+        if (item.logs && Array.isArray(item.logs)) {
+          item.logs.forEach(l => {
+            inventoryLogs.push({
+              date: l.timestamp,
+              name: item.name,
+              type: l.type,
+              quantity: l.quantity,
+              person: l.person,
+              details: l.details || '',
+              prevQty: l.previousQuantity,
+              newQty: l.newQuantity
+            });
+          });
+        }
+      });
+
+      // Sort chronologically, newest transactions first
+      inventoryLogs.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      const csvHeaders = ["Date/Time", "Material Name", "Adjustment Type", "Quantity Adjusted", "Ref Person/Party", "Transaction Details", "Previous Stock Level", "New Stock Level"];
+      const csvRows = [
+        csvHeaders.join(','),
+        ...inventoryLogs.map(log => [
+          `"${String(log.date).replace(/"/g, '""')}"`,
+          `"${String(log.name).replace(/"/g, '""')}"`,
+          `"${String(log.type).replace(/"/g, '""')}"`,
+          `"${String(log.quantity).replace(/"/g, '""')}"`,
+          `"${String(log.person).replace(/"/g, '""')}"`,
+          `"${String(log.details).replace(/"/g, '""')}"`,
+          `"${String(log.prevQty).replace(/"/g, '""')}"`,
+          `"${String(log.newQty).replace(/"/g, '""')}"`
+        ].join(','))
+      ];
+      const csvContent = csvRows.join('\n');
+      const csvFileHandle = await targetFolder.getFileHandle('inventory_logs.csv', { create: true });
+      const csvWritableStream = await csvFileHandle.createWritable();
+      await csvWritableStream.write(csvContent);
+      await csvWritableStream.close();
+      console.log("Successfully mirrored inventory log CSV file offline.");
+    }
     
     // Update last sync time state/localstorage if settings tab is listening
     const timeString = new Date().toLocaleTimeString();
@@ -580,7 +625,7 @@ class GlassERPState {
     this.notify();
 
     if (this.state.systemLogs) {
-      syncDataToOfflineFileStorage(this.state.systemLogs).catch(console.error);
+      syncDataToOfflineFileStorage(this.state.systemLogs, this.state.inventory).catch(console.error);
     }
 
     const promises = [];
@@ -1399,6 +1444,53 @@ class GlassERPState {
     this.logAudit('CREATE_INVENTORY', 'inventory', preState, this.state);
     this.saveState();
     return newItem;
+  }
+
+  adjustInventoryStock(itemId, quantityChange, type, person, details) {
+    const preState = clone(this.state);
+    const item = this.state.inventory.find(i => i.id === itemId);
+    if (!item) throw new Error('Inventory item not found');
+
+    const prevQty = item.quantity;
+    item.quantity = round(item.quantity + quantityChange);
+    
+    // Ensure logs array exists on the item
+    if (!item.logs) {
+      item.logs = [];
+    }
+
+    const logEntry = {
+      timestamp: new Date().toISOString(),
+      type: type, // 'IN' or 'OUT'
+      quantity: Math.abs(quantityChange),
+      person: person,
+      details: details,
+      previousQuantity: prevQty,
+      newQuantity: item.quantity
+    };
+    item.logs.push(logEntry);
+
+    // Also add to systemLogs
+    const systemLogEntry = {
+      id: uuid(),
+      date: new Date().toISOString().split('T')[0],
+      hardwareName: item.name,
+      partyName: person,
+      fitterName: details || '',
+      input: type === 'IN' ? String(Math.abs(quantityChange)) : '',
+      output: type === 'OUT' ? String(Math.abs(quantityChange)) : '',
+      blank1: `Stock adjustment: ${type}`,
+      blank2: '',
+      total: String(item.quantity)
+    };
+    if (!this.state.systemLogs) {
+      this.state.systemLogs = [];
+    }
+    this.state.systemLogs.unshift(systemLogEntry);
+
+    this.logAudit('ADJUST_INVENTORY', `inventory/${itemId}`, preState, this.state);
+    this.saveState();
+    return item;
   }
 
   // Project Operations
